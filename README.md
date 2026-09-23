@@ -1,86 +1,194 @@
-# ModelProof 🛡️ (v1.0.0)
-> Zero-persistence client-side and CLI forensic scanner to detect LLM model spoofing, proxy masking, and silent downgrades.
+<p align="center">
+  <img src="favicon.svg" width="64" height="64" alt="ModelProof Logo" />
+</p>
 
-Available as:
-- **Web App**: 100% Client-side sandbox deployable on GitHub Pages.
-- **Node.js CLI**: Run instantly via `npx modelproof`.
-- **Python CLI**: Run via `pip install modelproof` or `python -m modelproof.cli`.
+<h1 align="center">ModelProof</h1>
+
+<p align="center">
+  <strong>Zero-persistence client-side & CLI forensic scanner to detect LLM model spoofing, reverse-proxy masking, and silent downgrades.</strong>
+</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/modelproof"><img src="https://img.shields.io/npm/v/modelproof.svg?color=10b981&label=npm" alt="npm version" /></a>
+  <a href="https://pypi.org/project/modelproof/"><img src="https://img.shields.io/pypi/v/modelproof.svg?color=10b981&label=pypi" alt="pypi version" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License" /></a>
+  <img src="https://img.shields.io/badge/zero-telemetry-emerald" alt="Zero Telemetry" />
+  <img src="https://img.shields.io/badge/dependencies-0-brightgreen" alt="Zero Dependencies" />
+</p>
 
 ---
 
-## ⚡ 10-Vector Detection Matrix
+## 📌 Why ModelProof?
 
-1. **Spatial Logic & Character Horizon**: Obfuscated character counting trap (`'s-t-r-a-w-b-e-r-r-y'`) + runtime multiplication trap.
-2. **Tokenizer Usage & BPE Precision**: Multi-byte Unicode sequence testing token discrepancy and upstream token stripping.
-3. **Internal System Identity & Vendor Breakout**: Adversarial prompts probing foundational weights and vendor disavowal.
-4. **Streaming Telemetry & Speed Profiling (TTFT & TPS)**: Real-time SSE stream parser measuring Time-to-First-Token and Tokens-per-Second.
-5. **Negative Constraint Compliance**: Enforces strict negative constraints (zero fluff, raw CSV/SVG).
-6. **Strict Schema / Constrained Decoding**: Tests native JSON Schema strict parsing (crashes weak proxy engines).
-7. **Glitched Token Embedding Anomaly**: Probes unspeakable tokens (`SolidGoldMagikarp`) tokenizer behavior.
-8. **Temporal Cutoff Horizon (2024-H2)**: Validates late-2024 events (Nobel October 2024, Python 3.13).
-9. **Reasoning CoT & Delimiter Trap**: Checks reasoning tokens vs `<think>` tags (detects DeepSeek-R1 masked as OpenAI o1).
-10. **High-Order Type Logic**: Tests compiler-level Rust lifetime borrow checker & HRTB syntax.
+Unauthorized LLM resellers and reverse-proxy providers often engage in **model spoofing**:
+- Re-routing expensive requests (e.g. `claude-3-5-sonnet`, `gpt-4o`) to cheaper open-weights models (`qwen-2.5-7b`, `deepseek-v3`, or quantized mini variants).
+- Stripping system instructions and inserting hidden proxy jailbreaks.
+- Fabricating fake model IDs in `/v1/models` catalogs.
+
+**ModelProof** gives developers, QA engineers, and consumers a **verifiable forensic audit trail** with an **authenticity confidence score (0-100%)** before trusting an endpoint in production.
+
+---
+
+## 🚀 Deployment Modes
+
+| Platform | Distribution | Execution Command | Zero Deps? |
+| :--- | :--- | :--- | :---: |
+| **Terminal (Node.js)** | NPM Registry | `npx modelproof` | ✅ Yes |
+| **Terminal (Python)** | PyPI Package | `pip install modelproof` | ✅ Yes |
+| **Browser (Web Sandbox)** | Static HTML/JS | Deploy to GitHub Pages / Vercel / Netlify | ✅ Yes |
+
+---
+
+## ⚡ 10-Vector Forensic Detection Matrix
+
+ModelProof executes 10 adversarial probes calibrated against official model weight checkpoints:
+
+| # | Forensic Vector | Target Vulnerability / Anomaly | Fast? |
+| :-: | :--- | :--- | :-: |
+| **01** | **Spatial Logic & Character Horizon** | Obfuscated character counting (`'s-t-r-a-w-b-e-r-r-y'`) + arithmetic runtime trap | ⚡ FAST |
+| **02** | **Tokenizer Usage & BPE Precision** | Multi-byte Unicode sequence testing token discrepancy and upstream token stripping | ⚡ FAST |
+| **03** | **System Instruction & Identity Leak** | Adversarial system prompt breakout probing true base weights and vendor confessions | ⚡ FAST |
+| **04** | **Hardware Telemetry & TPS Profile** | Real-time SSE stream parser detecting hyper-fast LPU hardware (>220 TPS SambaNova/Groq) | ⚡ FAST |
+| **05** | **Negative Constraint Compliance** | Rigid formatting constraints without conversational fluff or apology preambles | ⚡ FAST |
+| **06** | **Strict Schema / Constrained Decoding** | Enforces native JSON Schema strict parsing (crashes weak proxy engines) | 🔬 DEEP |
+| **07** | **Glitched Token Embedding Anomaly** | Unspeakable tokens (`SolidGoldMagikarp`) tokenizer behavior checks | ⚡ FAST |
+| **08** | **Temporal Cutoff Horizon (2024-H2)** | Probes post-training cutoff events (Python 3.13, Nobel Oct 2024) | ⚡ FAST |
+| **09** | **Reasoning CoT & Delimiter Trap** | Detects OpenAI `o1`/`o3` masked as DeepSeek-R1 via `<think>` token analysis | 🔬 DEEP |
+| **10** | **Type-Level Memory & Lifetime Logic** | Compiler-level Rust borrow checker & HRTB (`for<'a>`) lifetime reasoning | 🔬 DEEP |
 
 ---
 
 ## 💻 CLI Quickstart
 
-### Option A: NPX (No installation required)
-```bash
-# Instant audit via npx
-npx modelproof -u "https://my-custom-proxy.com/v1" -k "sk-..." -m "qwen-2.5-72b-instruct"
+Both the Node.js and Python CLIs are **100% zero-dependency**, running directly with native system runtimes (`fetch` and standard library `urllib`).
 
-# Deep audit with all 10 vectors + JSON output
-npx modelproof -u "https://api.openai.com/v1" -k "$OPENAI_API_KEY" -m "gpt-4o" --all --json
+### 1. Node.js (NPX)
+
+Run directly without installing:
+
+```bash
+# Basic scan against custom reverse proxy
+npx modelproof -u "https://my-proxy.com/v1" -k "sk-..." -m "claude-3-5-sonnet-20241022"
+
+# Deep audit running all 10 vectors with JSON output (CI/CD ready)
+npx modelproof -u "https://my-proxy.com/v1" -k "sk-..." -m "gpt-4o" --all --json
+
+# Inspect available models from upstream catalog
+npx modelproof -u "https://my-proxy.com/v1" -k "sk-..." --models-only
 ```
 
-### Option B: Python (PIP)
+### 2. Python (PIP)
+
+Install from PyPI:
+
 ```bash
-# Install package
 pip install modelproof
-
-# Run audit
-modelproof -u "https://my-custom-proxy.com/v1" -k "sk-..." -m "claude-3-5-sonnet-20241022"
-
-# Audit catalog only
-modelproof -u "https://my-custom-proxy.com/v1" -k "sk-..." --models-only
 ```
 
-### CLI Options:
-| Flag | Description | Default |
-| :--- | :--- | :--- |
-| `-u, --base-url` | Reverse proxy base URL | `https://api.openai.com/v1` |
-| `-k, --key` | API Token / Key | `$OPENAI_API_KEY` |
-| `-m, --model` | Claimed model profile | `claude-3-5-sonnet-20241022` |
-| `-p, --protocol` | Protocol wire schema (`auto`, `openai`, `anthropic`) | `auto` |
-| `-a, --all` | Run all 10 vectors (default: 8 fast vectors) | `false` |
-| `--models-only` | Audit `/v1/models` catalog only | `false` |
-| `--lang` | Report language (`en`, `id`) | `en` |
-| `--json` | Output pure JSON for CI/CD | `false` |
-| `--timeout` | Request timeout in seconds | `30` |
+Run audit:
+
+```bash
+# Audit model authenticity
+modelproof -u "https://my-proxy.com/v1" -k "sk-..." -m "gpt-4o"
+
+# Run in Indonesian language
+modelproof -u "https://my-proxy.com/v1" -k "sk-..." -m "claude-3-5-sonnet-20241022" --lang id
+
+# Run all 10 deep vectors
+modelproof -u "https://my-proxy.com/v1" -k "sk-..." --all
+```
+
+Or execute without global install:
+```bash
+python -m modelproof.cli -u "https://my-proxy.com/v1" -k "sk-..." -m "gpt-4o"
+```
 
 ---
 
-## 🌐 Web App Deployment (GitHub Pages)
+## ⚙️ CLI Options & Flags
 
-1. Push this directory to your GitHub repository:
+```text
+Usage: modelproof [options]
+
+Options:
+  -u, --base-url <url>      Reverse proxy base URL (default: "https://api.openai.com/v1")
+  -k, --key <token>         API Token / Key (or set OPENAI_API_KEY env var)
+  -m, --model <id>          Claimed target model ID (default: "claude-3-5-sonnet-20241022")
+  -p, --protocol <proto>    Protocol wire schema: auto, openai, anthropic (default: "auto")
+  -a, --all                 Run all 10 deep vectors (default: 8 fast vectors)
+  --models-only             Audit upstream /v1/models catalog only and exit
+  --lang <lang>             Output language: en, id (default: "en")
+  --json                    Output pure machine-readable JSON report
+  --timeout <sec>           Per-request timeout in seconds (default: 30)
+  -v, --version             Show version number
+  -h, --help                Display help message
+```
+
+---
+
+## 📊 Sample Terminal Output
+
+```text
+================================================================================
+ MODELPROOF CLI // LLM Proxy & Masking Forensic Scanner (v1.0.0)
+ Target: claude-3-5-sonnet-20241022 @ https://my-custom-proxy.com/v1
+================================================================================
+[*] Protocol Wire Schema: ANTHROPIC
+[*] Catalog Audit: 42 models retrieved (Clean naming).
+
+[+] RUNNING 8 FORENSIC VECTORS:
+--------------------------------------------------------------------------------
+  [01] Spatial Logic & Character Horizon    [PASS]  r=3, math=324
+  [02] Tokenizer Usage & BPE Precision      [PASS]  Usage discrepancy within tolerance
+  [03] System Instruction & Identity Leak   [PASS]  Responded as official Claude
+  [04] Hardware Telemetry & TPS Profile     [PASS]  64 TPS (Realistic datacenter profile)
+  [05] Negative Constraint Compliance       [PASS]  Zero preamble constraint honored
+  [06] Strict JSON Schema Decoding          [PASS]  Schema enforced natively
+  [07] Glitched Token Embedding             [PASS]  Token boundary verified
+  [08] Temporal Cutoff Horizon (2024-H2)    [PASS]  Verified post-2024H2 event awareness
+--------------------------------------------------------------------------------
+
+============================= FORENSIC VERDICT =================================
+ AUTHENTICITY SCORE   : 100%
+ VERDICT              : VERIFIED GENUINE
+ DETECTED VENDOR      : Anthropic Claude
+ RISK LEVEL           : SAFE
+
+ [+] CONCLUSION: Target verified consistent with genuine foundational weights.
+================================================================================
+```
+
+---
+
+## 🌐 Web App Deployment (GitHub Pages / Vercel / Netlify)
+
+ModelProof is entirely static (`index.html`, `app.js`, `favicon.svg`). No backend or database required.
+
+### Deploy to GitHub Pages (1-Minute Setup):
+1. Push this repository to GitHub:
    ```bash
    git add .
-   git commit -m "feat: initial release"
-   git branch -M main
+   git commit -m "feat: release v1.0.0"
    git push -u origin main
    ```
-2. In your GitHub repo:
+2. Navigate to your repository on GitHub:
    - Go to **Settings** → **Pages**.
-   - Under **Build and deployment** > **Source**, choose **Deploy from a branch**.
-   - Select branch `main` and folder `/ (root)`.
+   - Under **Build and deployment** → **Source**, select **Deploy from a branch**.
+   - Select branch `main` and root folder `/`.
    - Click **Save**.
-3. Your app is live at `https://<your-username>.github.io/<your-repo-name>/`.
+3. Access your web audit tool at `https://<username>.github.io/<repo-name>/`.
 
 ---
 
-## 🔒 Privacy & Security
+## 🛡️ Security, Privacy & Compliance
 
-- **Zero Telemetry**: All requests travel strictly between your client and your designated proxy.
-- **In-Memory**: API keys are never persisted or shared.
-- **Open Source**: Full code inspection available under the MIT License.
+- **Zero Telemetry Retention**: ModelProof never logs, collects, or transmits your API keys, base URLs, or payload data to any central server.
+- **Client-Side Sandbox**: In the web interface, network traffic travels directly from your browser to your designated proxy endpoint.
+- **In-Memory Volatility**: Credentials are held strictly in runtime volatile memory and are cleared upon reload.
+
+---
+
+## 📄 License
+
+ModelProof is distributed under the [MIT License](LICENSE).
+Open source, auditable, and free for commercial and non-commercial usage.
