@@ -340,7 +340,7 @@ function renderTestCheckboxes() {
   });
 }
 
-// Render Pipeline Rows with Sleek Card Look
+// Render Pipeline Rows with Sleek Card Look (Mobile Responsive)
 function renderPipelineRows() {
   el.testPipelineContainer.innerHTML = '';
   const activeTests = TEST_REGISTRY.filter(t => state.selectedTests.includes(t.id));
@@ -356,16 +356,16 @@ function renderPipelineRows() {
   activeTests.forEach(t => {
     const row = document.createElement('div');
     row.id = `test-row-${t.id}`;
-    row.className = 'p-2.5 rounded bg-zinc-950/60 border border-zinc-800/60 flex items-start justify-between gap-3 transition';
+    row.className = 'p-2 sm:p-2.5 rounded bg-zinc-950/60 border border-zinc-800/60 flex items-start justify-between gap-2.5 sm:gap-3 transition';
     row.innerHTML = `
-      <div class="space-y-0.5">
+      <div class="space-y-0.5 min-w-0 flex-1">
         <div class="flex items-center gap-2">
-          <span class="test-icon text-xs text-zinc-600 font-mono"><i class="fa-regular fa-circle"></i></span>
-          <span class="text-xs font-mono font-medium text-zinc-300">${String(t.id).padStart(2, '0')}. ${t.name}</span>
+          <span class="test-icon text-xs text-zinc-600 font-mono shrink-0"><i class="fa-regular fa-circle"></i></span>
+          <span class="text-xs font-mono font-medium text-zinc-300 truncate">${String(t.id).padStart(2, '0')}. ${t.name}</span>
         </div>
-        <p class="text-[11px] text-zinc-500 test-detail font-sans">${t.desc}</p>
+        <p class="text-[11px] text-zinc-500 test-detail font-sans pl-5 break-words">${t.desc}</p>
       </div>
-      <span class="test-status font-mono text-[10px] px-2 py-0.5 rounded bg-zinc-900 text-zinc-500 border border-zinc-800 uppercase tracking-wider">PENDING</span>
+      <span class="test-status font-mono text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded bg-zinc-900 text-zinc-500 border border-zinc-800 uppercase tracking-wider shrink-0 mt-0.5">PENDING</span>
     `;
     el.testPipelineContainer.appendChild(row);
   });
