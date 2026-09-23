@@ -58,6 +58,14 @@
     .custom-scroll::-webkit-scrollbar-thumb { background: #27272a; border-radius: 2px; }
     .custom-scroll::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
     
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .animate-spin-fast {
+      animation: spin 0.75s linear infinite;
+    }
+
     .panel {
       background: #0d0d11;
       border: 1px solid #1e1e24;
@@ -81,7 +89,7 @@
     <div class="max-w-7xl mx-auto px-3 sm:px-5 py-2.5 flex items-center justify-between">
       <div class="flex items-center space-x-2 sm:space-x-3">
         <div class="flex items-center gap-1.5 sm:gap-2">
-          <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
           <span class="font-mono font-semibold tracking-tight text-xs sm:text-sm text-zinc-100">MODEL<span class="text-emerald-400">PROOF</span></span>
           <span class="text-zinc-600 font-mono text-xs">/</span>
           <span class="text-[10px] sm:text-[11px] font-mono text-zinc-400 bg-zinc-900 border border-zinc-800 px-1.5 sm:px-2 py-0.5 rounded">v2.4</span>
@@ -123,7 +131,7 @@
           <div class="flex items-center justify-between text-xs">
             <label class="text-zinc-400 font-medium">Protocol Wire Schema</label>
             <span id="detected-proto-badge" class="text-[10px] font-mono text-emerald-400 px-1.5 py-0.2 rounded bg-emerald-950/60 border border-emerald-800/60 flex items-center gap-1">
-              <span class="w-1 h-1 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
               <span>AUTO: STANDBY</span>
             </span>
           </div>
@@ -246,7 +254,8 @@
 
         <!-- Primary Action Trigger -->
         <button id="btn-start-audit" class="w-full mt-2 py-2.5 px-4 rounded bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-zinc-950 font-semibold font-mono text-xs tracking-wider uppercase transition flex items-center justify-center gap-2 shadow-sm">
-          <i class="fa-solid fa-play text-[11px]"></i> Launch Forensic Scan
+          <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          <span>Launch Forensic Scan</span>
         </button>
       </div>
 

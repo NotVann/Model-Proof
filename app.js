@@ -310,10 +310,10 @@ async function detectProtocol() {
   return state.detectedProtocol;
 }
 
-function updateProtocolBadge(text, isPulsing = false) {
+function updateProtocolBadge(text, isProbing = false) {
   if (!el.detectedProtoBadge) return;
   el.detectedProtoBadge.innerHTML = `
-    <span class="w-1.5 h-1.5 rounded-full ${isPulsing ? 'bg-cyan-400 animate-ping' : 'bg-emerald-400'}"></span>
+    <span class="w-1.5 h-1.5 rounded-full ${isProbing ? 'bg-cyan-400 animate-spin-fast' : 'bg-emerald-400'}"></span>
     <span>${text}</span>
   `;
 }
@@ -560,7 +560,13 @@ async function fetchAvailableModels() {
 
   const origBtnText = el.btnFetchModels.innerHTML;
   el.btnFetchModels.disabled = true;
-  el.btnFetchModels.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-emerald-400"></i> <span>Querying...</span>';
+  el.btnFetchModels.innerHTML = `
+    <svg class="w-3.5 h-3.5 text-emerald-400 animate-spin-fast shrink-0" viewBox="0 0 24 24" fill="none">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+    <span>Querying...</span>
+  `;
   appendLog('[Inventory Audit] Querying GET /v1/models...', 'highlight');
 
   let targetUrl = state.baseUrl || 'https://api.openai.com/v1';
@@ -837,19 +843,22 @@ function updateTestRow(testId, status, detailText = null) {
   if (detailText) detail.textContent = detailText;
 
   if (status === 'RUNNING') {
-    icon.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-cyan-400"></i>';
+    icon.innerHTML = `<svg class="w-3.5 h-3.5 text-cyan-400 animate-spin-fast shrink-0 inline-block" viewBox="0 0 24 24" fill="none">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>`;
     statusBadge.textContent = 'RUNNING';
     statusBadge.className = 'test-status font-mono text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 uppercase';
   } else if (status === 'PASSED') {
-    icon.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-400"></i>';
+    icon.innerHTML = `<svg class="w-3.5 h-3.5 text-emerald-400 shrink-0 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
     statusBadge.textContent = 'PASSED';
     statusBadge.className = 'test-status font-mono text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 uppercase';
   } else if (status === 'WARNING') {
-    icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-yellow-400"></i>';
+    icon.innerHTML = `<svg class="w-3.5 h-3.5 text-yellow-400 shrink-0 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`;
     statusBadge.textContent = 'SUSPICIOUS';
     statusBadge.className = 'test-status font-mono text-[10px] px-2 py-0.5 rounded bg-yellow-950 text-yellow-400 border border-yellow-800 uppercase';
   } else if (status === 'FAILED') {
-    icon.innerHTML = '<i class="fa-solid fa-circle-xmark text-rose-400"></i>';
+    icon.innerHTML = `<svg class="w-3.5 h-3.5 text-rose-400 shrink-0 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
     statusBadge.textContent = 'FAILED';
     statusBadge.className = 'test-status font-mono text-[10px] px-2 py-0.5 rounded bg-rose-950 text-rose-400 border border-rose-800 uppercase';
   }
@@ -1482,7 +1491,13 @@ async function startAudit() {
   state.isRunning = true;
   auditState.findings = []; // Reset findings for clean audit run
   el.btnStartAudit.disabled = true;
-  el.btnStartAudit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Running Audit...';
+  el.btnStartAudit.innerHTML = `
+    <svg class="w-4 h-4 text-zinc-950 animate-spin-fast shrink-0" viewBox="0 0 24 24" fill="none">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+    <span>Running Audit...</span>
+  `;
 
   // Reset UI
   state.selectedTests.forEach(id => updateTestRow(id, 'PENDING'));
@@ -1551,7 +1566,10 @@ async function startAudit() {
   } finally {
     state.isRunning = false;
     el.btnStartAudit.disabled = false;
-    el.btnStartAudit.innerHTML = '<i class="fa-solid fa-play"></i> Launch Forensic Scan';
+    el.btnStartAudit.innerHTML = `
+      <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      <span>Launch Forensic Scan</span>
+    `;
   }
 }
 
