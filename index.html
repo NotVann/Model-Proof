@@ -211,19 +211,32 @@
               <span>Fetch /v1/models</span>
             </button>
           </div>
-          <div class="relative">
-            <select id="claimed-model-select" class="input-field w-full rounded px-3 py-2 text-xs font-mono text-zinc-200 outline-none appearance-none cursor-pointer">
-              <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (claude-3-5-sonnet-20241022)</option>
-              <option value="claude-3-7-sonnet">Claude 3.7 Sonnet (claude-3-7-sonnet)</option>
-              <option value="gpt-4o">GPT-4o (gpt-4o)</option>
-              <option value="gpt-4o-mini">GPT-4o Mini (gpt-4o-mini)</option>
-              <option value="o1">OpenAI o1 (o1 / o1-preview)</option>
-              <option value="o3-mini">OpenAI o3-mini (o3-mini)</option>
-              <option value="deepseek-r1">DeepSeek R1 (deepseek-r1)</option>
-              <option value="custom">-- Custom Identity String --</option>
-            </select>
-            <i class="fa-solid fa-chevron-down absolute right-3 top-2.5 text-[10px] text-zinc-500 pointer-events-none"></i>
+          <!-- Custom Searchable Combobox -->
+          <div class="relative" id="model-combobox-container">
+            <div id="model-combobox-trigger" class="input-field w-full rounded px-3 py-2 text-xs font-mono text-zinc-200 cursor-pointer flex items-center justify-between border hover:border-zinc-700 transition">
+              <span id="model-combobox-label" class="truncate">Claude 3.5 Sonnet (claude-3-5-sonnet-20241022)</span>
+              <svg id="model-combobox-chevron" class="w-3 h-3 text-zinc-500 shrink-0 ml-1.5 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+
+            <!-- Searchable Dropdown Menu -->
+            <div id="model-combobox-dropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-[#0c0c10] border border-zinc-800 rounded-lg shadow-2xl z-50 p-2 space-y-1.5 backdrop-blur-md">
+              <div class="relative">
+                <input type="text" id="model-search-input" placeholder="Search model name or vendor..." 
+                  class="w-full bg-zinc-950 border border-zinc-800 rounded px-2.5 py-1.5 text-xs font-mono text-zinc-200 placeholder-zinc-500 outline-none focus:border-emerald-500/70 transition">
+                <svg class="w-3.5 h-3.5 text-zinc-500 absolute right-2.5 top-2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+
+              <!-- Filtered Model List -->
+              <div id="model-options-list" class="max-h-56 overflow-y-auto custom-scroll space-y-0.5 text-xs font-mono">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
           </div>
+
           <input type="text" id="claimed-model-custom" placeholder="Type custom model string..." 
             class="hidden input-field w-full mt-2 rounded px-3 py-2 text-xs font-mono text-zinc-200 outline-none">
           

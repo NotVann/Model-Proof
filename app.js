@@ -160,8 +160,14 @@ const el = {
   btnToggleKey: document.getElementById('btn-toggle-key'),
   btnFetchModels: document.getElementById('btn-fetch-models'),
   inventorySanityBanner: document.getElementById('inventory-sanity-banner'),
-  claimedModelSelect: document.getElementById('claimed-model-select'),
   claimedModelCustom: document.getElementById('claimed-model-custom'),
+  modelComboboxContainer: document.getElementById('model-combobox-container'),
+  modelComboboxTrigger: document.getElementById('model-combobox-trigger'),
+  modelComboboxLabel: document.getElementById('model-combobox-label'),
+  modelComboboxChevron: document.getElementById('model-combobox-chevron'),
+  modelComboboxDropdown: document.getElementById('model-combobox-dropdown'),
+  modelSearchInput: document.getElementById('model-search-input'),
+  modelOptionsList: document.getElementById('model-options-list'),
   toggleCorsOpts: document.getElementById('toggle-cors-opts'),
   corsDrawer: document.getElementById('cors-options-drawer'),
   corsProxyPrefix: document.getElementById('cors-proxy-prefix'),
@@ -407,19 +413,150 @@ function renderPipelineRows() {
   });
 }
 
+// Model Catalog State for Searchable Combobox
+const DEFAULT_PRESET_MODELS = [
+  { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet (claude-3-5-sonnet-20241022)', vendor: 'Anthropic' },
+  { id: 'claude-3-7-sonnet', name: 'Claude 3.7 Sonnet (claude-3-7-sonnet)', vendor: 'Anthropic' },
+  { id: 'gpt-4o', name: 'GPT-4o (gpt-4o)', vendor: 'OpenAI' },
+  { id: 'gpt-4o-mini', name: 'GPT-4o Mini (gpt-4o-mini)', vendor: 'OpenAI' },
+  { id: 'o1', name: 'OpenAI o1 (o1 / o1-preview)', vendor: 'OpenAI' },
+  { id: 'o3-mini', name: 'OpenAI o3-mini (o3-mini)', vendor: 'OpenAI' },
+  { id: 'deepseek-r1', name: 'DeepSeek R1 (deepseek-r1)', vendor: 'DeepSeek' },
+  { id: 'qwen-2.5-72b-instruct', name: 'Qwen 2.5 72B Instruct (qwen-2.5-72b-instruct)', vendor: 'Alibaba' },
+  { id: 'llama-3.3-70b-instruct', name: 'Meta Llama 3.3 70B (llama-3.3-70b-instruct)', vendor: 'Meta' }
+];
+
+let catalogModels = [...DEFAULT_PRESET_MODELS];
+
+function renderModelOptions(searchTerm = '') {
+  if (!el.modelOptionsList) return;
+  el.modelOptionsList.innerHTML = '';
+  const term = searchTerm.toLowerCase().trim();
+
+  const filtered = catalogModels.filter(m => 
+    m.id.toLowerCase().includes(term) || 
+    (m.name && m.name.toLowerCase().includes(term)) ||
+    (m.vendor && m.vendor.toLowerCase().includes(term))
+  );
+
+  if (filtered.length === 0) {
+    el.modelOptionsList.innerHTML = `
+      <div class="p-2.5 text-center text-zinc-500 italic text-[11px]">
+        No matching model found. Click "Custom" below.
+      </div>
+    `;
+  } else {
+    filtered.forEach(m => {
+      const isSelected = state.claimedModel === m.id;
+      const item = document.createElement('div');
+      item.className = `p-2 rounded cursor-pointer transition flex items-center justify-between ${
+        isSelected ? 'bg-emerald-950/40 text-emerald-300 font-medium' : 'hover:bg-zinc-900 text-zinc-300'
+      }`;
+      item.innerHTML = `
+        <div class="truncate flex-1 pr-2">
+          <span class="block truncate">${m.name || m.id}</span>
+          ${m.vendor ? `<span class="text-[9px] text-zinc-500 uppercase font-sans">${m.vendor}</span>` : ''}
+        </div>
+        ${isSelected ? '<svg class="w-3.5 h-3.5 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>' : ''}
+      `;
+
+      item.addEventListener('click', () => {
+        selectModel(m.id, m.name || m.id);
+        closeModelCombobox();
+      });
+
+      el.modelOptionsList.appendChild(item);
+    });
+  }
+
+  // Always append Custom option at bottom
+  const customItem = document.createElement('div');
+  const isCustomSelected = state.claimedModel === 'custom' || !catalogModels.some(m => m.id === state.claimedModel);
+  customItem.className = `p-2 rounded cursor-pointer border-t border-zinc-800/80 transition flex items-center justify-between text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900 ${
+    isCustomSelected ? 'bg-zinc-900/60 font-medium text-emerald-400' : ''
+  }`;
+  customItem.innerHTML = `
+    <span class="italic text-[11px]">+ Custom Model String...</span>
+    <span class="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400">MANUAL</span>
+  `;
+  customItem.addEventListener('click', () => {
+    selectModel('custom', '-- Custom Identity String --');
+    closeModelCombobox();
+  });
+  el.modelOptionsList.appendChild(customItem);
+}
+
+function selectModel(modelId, displayLabel) {
+  if (modelId === 'custom') {
+    el.claimedModelCustom.classList.remove('hidden');
+    el.modelComboboxLabel.textContent = '-- Custom Identity String --';
+    state.claimedModel = el.claimedModelCustom.value.trim() || 'custom';
+    el.claimedModelCustom.focus();
+  } else {
+    el.claimedModelCustom.classList.add('hidden');
+    el.modelComboboxLabel.textContent = displayLabel;
+    state.claimedModel = modelId;
+  }
+  localStorage.setItem('mm_claimed_model', state.claimedModel);
+  renderModelOptions(el.modelSearchInput?.value || '');
+}
+
+function toggleModelCombobox() {
+  const isHidden = el.modelComboboxDropdown.classList.contains('hidden');
+  if (isHidden) {
+    openModelCombobox();
+  } else {
+    closeModelCombobox();
+  }
+}
+
+function openModelCombobox() {
+  el.modelComboboxDropdown.classList.remove('hidden');
+  el.modelComboboxChevron.classList.add('rotate-180');
+  if (el.modelSearchInput) {
+    el.modelSearchInput.value = '';
+    renderModelOptions('');
+    setTimeout(() => el.modelSearchInput.focus(), 50);
+  }
+}
+
+function closeModelCombobox() {
+  el.modelComboboxDropdown.classList.add('hidden');
+  el.modelComboboxChevron.classList.remove('rotate-180');
+}
+
+// Close combobox when clicking outside
+document.addEventListener('click', (e) => {
+  if (el.modelComboboxContainer && !el.modelComboboxContainer.contains(e.target)) {
+    closeModelCombobox();
+  }
+});
+
 // Init UI
 function initUI() {
   if (state.baseUrl) el.baseUrl.value = state.baseUrl;
   if (state.apiKey) el.apiKey.value = state.apiKey;
   if (state.corsProxy) el.corsProxyPrefix.value = state.corsProxy;
 
-  const foundOption = Array.from(el.claimedModelSelect.options).find(o => o.value === state.claimedModel);
-  if (foundOption) {
-    el.claimedModelSelect.value = state.claimedModel;
+  const foundModel = catalogModels.find(m => m.id === state.claimedModel);
+  if (foundModel) {
+    selectModel(foundModel.id, foundModel.name || foundModel.id);
+  } else if (state.claimedModel && state.claimedModel !== 'custom') {
+    // Retain custom cached model
+    catalogModels.unshift({ id: state.claimedModel, name: state.claimedModel, vendor: 'Custom / Saved' });
+    selectModel(state.claimedModel, state.claimedModel);
   } else {
-    el.claimedModelSelect.value = 'custom';
-    el.claimedModelCustom.classList.remove('hidden');
-    el.claimedModelCustom.value = state.claimedModel;
+    selectModel('custom', '-- Custom Identity String --');
+  }
+
+  // Bind Combobox Click & Search
+  if (el.modelComboboxTrigger) {
+    el.modelComboboxTrigger.addEventListener('click', toggleModelCombobox);
+  }
+  if (el.modelSearchInput) {
+    el.modelSearchInput.addEventListener('input', (e) => {
+      renderModelOptions(e.target.value);
+    });
   }
 
   updateProtocolUI();
@@ -534,21 +671,12 @@ el.btnToggleKey.addEventListener('click', () => {
   el.btnToggleKey.innerHTML = isPwd ? '<i class="fa-solid fa-eye-slash"></i>' : '<i class="fa-solid fa-eye"></i>';
 });
 
-el.claimedModelSelect.addEventListener('change', (e) => {
-  if (e.target.value === 'custom') {
-    el.claimedModelCustom.classList.remove('hidden');
-    state.claimedModel = el.claimedModelCustom.value.trim();
-  } else {
-    el.claimedModelCustom.classList.add('hidden');
-    state.claimedModel = e.target.value;
-  }
-  localStorage.setItem('mm_claimed_model', state.claimedModel);
-});
-
-el.claimedModelCustom.addEventListener('input', (e) => {
-  state.claimedModel = e.target.value.trim();
-  localStorage.setItem('mm_claimed_model', state.claimedModel);
-});
+if (el.claimedModelCustom) {
+  el.claimedModelCustom.addEventListener('input', (e) => {
+    state.claimedModel = e.target.value.trim() || 'custom';
+    localStorage.setItem('mm_claimed_model', state.claimedModel);
+  });
+}
 
 // Live Model Inventory Fetcher & Heuristic Sanity Scanner
 async function fetchAvailableModels() {
@@ -636,26 +764,21 @@ async function fetchAvailableModels() {
     auditState.flaggedCatalogModels = flagged;
     if (customOwners.size > 0) auditState.sellerTenant = Array.from(customOwners).join(', ');
 
-    // Populate Dropdown
-    el.claimedModelSelect.innerHTML = '';
-    models.forEach(m => {
-      const opt = document.createElement('option');
-      opt.value = m.id;
+    // Populate Searchable Combobox Catalog
+    catalogModels = models.map(m => {
       const ownerLabel = m.owned_by ? ` [${m.owned_by}]` : '';
-      opt.textContent = `${m.id}${ownerLabel}`;
-      el.claimedModelSelect.appendChild(opt);
+      return {
+        id: m.id,
+        name: `${m.id}${ownerLabel}`,
+        vendor: m.owned_by || 'Upstream Proxy'
+      };
     });
 
-    // Add custom option at end
-    const customOpt = document.createElement('option');
-    customOpt.value = 'custom';
-    customOpt.textContent = '-- Custom Identity String --';
-    el.claimedModelSelect.appendChild(customOpt);
-
-    // Select first model
-    state.claimedModel = models[0].id;
-    el.claimedModelSelect.value = state.claimedModel;
-    localStorage.setItem('mm_claimed_model', state.claimedModel);
+    // Select first model and refresh dropdown
+    if (catalogModels.length > 0) {
+      selectModel(catalogModels[0].id, catalogModels[0].name);
+    }
+    renderModelOptions('');
 
     // Display Inventory Sanity Banner
     el.inventorySanityBanner.classList.remove('hidden');
