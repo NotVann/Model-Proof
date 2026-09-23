@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/NotVann/modelproof/main/favicon.svg" width="64" height="64" alt="ModelProof Logo" />
+  <img src="https://raw.githubusercontent.com/NotVann/Model-Proof/main/favicon.svg" width="64" height="64" alt="ModelProof Logo" />
 </p>
 
 <h1 align="center">ModelProof</h1>
