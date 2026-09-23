@@ -43,8 +43,8 @@ classifiers = [
 dependencies = []
 
 [project.urls]
-Homepage = "https://github.com/siumik/ai-model-mask-checker"
-Repository = "https://github.com/siumik/ai-model-mask-checker"
+Homepage = "https://github.com/NotVann/modelproof"
+Repository = "https://github.com/NotVann/modelproof"
 
 [project.scripts]
 modelproof = "modelproof.cli:main"
