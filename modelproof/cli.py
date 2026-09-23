@@ -281,16 +281,16 @@ def vec1_spatial_logic(client: ApiClient, model: str):
     calc = int(m_match.group(1)) if m_match else None
 
     if cnt == item["expected"] and calc == expected_math:
-        return {"score": 1.0, "status": "PASS", "note": f"r={cnt}, math={calc}"}
-    return {"score": 0.2, "status": "WARN", "note": f"Discrepancy (expected {item['char']}={item['expected']}, math={expected_math})"}
+        return {"score": 1.0, "status": "PASS", "note": f"r={cnt}, math={calc}", "raw": raw}
+    return {"score": 0.2, "status": "WARN", "note": f"Discrepancy (expected {item['char']}={item['expected']}, math={expected_math})", "raw": raw}
 
 
 def vec2_tokenizer_bpe(client: ApiClient, model: str):
     res = client.call_model(model, [{"role": "user", "content": "Ping: 👩‍👩‍👧‍👦 𝔘𝔫𝔦𝔠𝔬𝔡𝔢 測試"}])
     usage = res.get("usage")
     if not usage or usage.get("prompt_tokens") in (None, 0):
-        return {"score": 0.4, "status": "WARN", "note": "Usage prompt_tokens stripped by upstream proxy"}
-    return {"score": 1.0, "status": "PASS", "note": f"BPE usage intact ({usage.get('prompt_tokens')} tokens)"}
+        return {"score": 0.4, "status": "WARN", "note": "Usage prompt_tokens stripped by upstream proxy", "raw": res.get("content")}
+    return {"score": 1.0, "status": "PASS", "note": f"BPE usage intact ({usage.get('prompt_tokens')} tokens)", "raw": res.get("content")}
 
 
 def vec3_identity_breakout(client: ApiClient, model: str):
@@ -303,21 +303,21 @@ def vec3_identity_breakout(client: ApiClient, model: str):
     claimed = model.lower()
 
     if any(x in low for x in ["sisa token", "kuota token", "token balance"]):
-        return {"score": 0.0, "status": "FAIL", "note": "CRITICAL: Leaked reseller quota banner ('sisa token')", "crit": True}
+        return {"score": 0.0, "status": "FAIL", "note": "CRITICAL: Leaked reseller quota banner ('sisa token')", "crit": True, "raw": res["content"]}
     if "kiro" in low or "arza" in low:
-        return {"score": 0.0, "status": "FAIL", "note": "CRITICAL: Leaked bot identity breakout", "crit": True}
+        return {"score": 0.0, "status": "FAIL", "note": "CRITICAL: Leaked bot identity breakout", "crit": True, "raw": res["content"]}
     if "claude" in claimed and any(x in low for x in ["openai", "chatgpt", "qwen"]):
-        return {"score": 0.0, "status": "FAIL", "note": "Claimed Claude, confessed competitor base", "crit": True}
+        return {"score": 0.0, "status": "FAIL", "note": "Claimed Claude, confessed competitor base", "crit": True, "raw": res["content"]}
     if ("gpt" in claimed or "o1" in claimed) and any(x in low for x in ["anthropic", "qwen"]):
-        return {"score": 0.0, "status": "FAIL", "note": "Claimed OpenAI, confessed competitor base", "crit": True}
+        return {"score": 0.0, "status": "FAIL", "note": "Claimed OpenAI, confessed competitor base", "crit": True, "raw": res["content"]}
 
-    return {"score": 1.0, "status": "PASS", "note": "Identity consistent with vendor profile"}
+    return {"score": 1.0, "status": "PASS", "note": "Identity consistent with vendor profile", "raw": res["content"]}
 
 
 def vec4_hardware_tps(client: ApiClient, model: str):
     if client.active_proto == "anthropic":
         res = client.call_model(model, [{"role": "user", "content": 'Return "OK"'}])
-        return {"score": 1.0, "status": "PASS", "note": f"Latency: {res['latency']}ms"}
+        return {"score": 1.0, "status": "PASS", "note": f"Latency: {res['latency']}ms", "raw": res.get("content")}
 
     try:
         res, t0 = client.call_model(model, [{"role": "user", "content": "Count from 1 to 25 separated by space."}], stream=True, max_tokens=90)
@@ -352,10 +352,10 @@ def vec4_hardware_tps(client: ApiClient, model: str):
         client.token_usage["total"] += (12 + est_tokens)
 
         if "claude" in model.lower() and tps > 210:
-            return {"score": 0.3, "status": "WARN", "note": f"Abnormal speed ({tps} TPS). Possible LPU/Groq spoof."}
-        return {"score": 1.0, "status": "PASS", "note": f"{ttft}ms TTFT | {tps} TPS"}
+            return {"score": 0.3, "status": "WARN", "note": f"Abnormal speed ({tps} TPS). Possible LPU/Groq spoof.", "raw": full_text}
+        return {"score": 1.0, "status": "PASS", "note": f"{ttft}ms TTFT | {tps} TPS", "raw": full_text}
     except Exception as e:
-        return {"score": 0.7, "status": "WARN", "note": f"Stream telemetry: {str(e)[:40]}"}
+        return {"score": 0.7, "status": "WARN", "note": f"Stream telemetry: {str(e)[:40]}", "raw": str(e)}
 
 
 def vec5_negative_constraint(client: ApiClient, model: str):
@@ -363,13 +363,13 @@ def vec5_negative_constraint(client: ApiClient, model: str):
     res = client.call_model(model, [{"role": "user", "content": prompt}])
     raw = res["content"].strip()
     if raw.startswith("```") or any(x in raw.lower() for x in ["here is", "certainly", "sure"]):
-        return {"score": 0.2, "status": "FAIL", "note": "Failed negative constraints (leaked fluff/markdown)"}
-    return {"score": 1.0, "status": "PASS", "note": "Strict zero-filler compliance passed"}
+        return {"score": 0.2, "status": "FAIL", "note": "Failed negative constraints (leaked fluff/markdown)", "raw": raw}
+    return {"score": 1.0, "status": "PASS", "note": "Strict zero-filler compliance passed", "raw": raw}
 
 
 def vec6_strict_schema(client: ApiClient, model: str):
     if client.active_proto == "anthropic":
-        return {"score": 1.0, "status": "PASS", "note": "Anthropic schema tool-use standard"}
+        return {"score": 1.0, "status": "PASS", "note": "Anthropic schema tool-use standard", "raw": "(Bypassed: Anthropic)"}
 
     strict_fmt = {
         "type": "json_schema",
@@ -390,9 +390,9 @@ def vec6_strict_schema(client: ApiClient, model: str):
     try:
         res = client.call_model(model, [{"role": "user", "content": "Generate dummy key and code."}], response_format=strict_fmt)
         json.loads(res["content"].strip())
-        return {"score": 1.0, "status": "PASS", "note": "Native constrained grammar passed"}
+        return {"score": 1.0, "status": "PASS", "note": "Native constrained grammar passed", "raw": res["content"]}
     except Exception as e:
-        return {"score": 0.0, "status": "FAIL", "note": f"Constrained decoding failed: {str(e)[:40]}"}
+        return {"score": 0.0, "status": "FAIL", "note": f"Constrained decoding failed: {str(e)[:40]}", "raw": str(e)}
 
 
 def vec7_glitched_token(client: ApiClient, model: str):
@@ -400,8 +400,8 @@ def vec7_glitched_token(client: ApiClient, model: str):
     prompt = f"Repeat this token exactly 3 times separated by dash: {token}"
     res = client.call_model(model, [{"role": "user", "content": prompt}])
     if f"{token}-{token}-{token}" in res["content"]:
-        return {"score": 1.0, "status": "PASS", "note": f"Glitched token ({token}) handled cleanly"}
-    return {"score": 0.4, "status": "WARN", "note": f"Glitched token anomaly on {token}"}
+        return {"score": 1.0, "status": "PASS", "note": f"Glitched token ({token}) handled cleanly", "raw": res["content"]}
+    return {"score": 0.4, "status": "WARN", "note": f"Glitched token anomaly on {token}", "raw": res["content"]}
 
 
 def vec8_temporal_cutoff(client: ApiClient, model: str):
@@ -409,8 +409,8 @@ def vec8_temporal_cutoff(client: ApiClient, model: str):
     res = client.call_model(model, [{"role": "user", "content": prompt}])
     low = res["content"].lower()
     if "hopfield" in low or "hinton" in low:
-        return {"score": 1.0, "status": "PASS", "note": "Verified Oct 2024 cutoff horizon"}
-    return {"score": 0.0, "status": "FAIL", "note": "Failed late-2024 cutoff horizon"}
+        return {"score": 1.0, "status": "PASS", "note": "Verified Oct 2024 cutoff horizon", "raw": res["content"]}
+    return {"score": 0.0, "status": "FAIL", "note": "Failed late-2024 cutoff horizon", "raw": res["content"]}
 
 
 def vec9_reasoning_cot(client: ApiClient, model: str):
@@ -420,11 +420,11 @@ def vec9_reasoning_cot(client: ApiClient, model: str):
     is_o1 = "o1" in model.lower() or "o3" in model.lower()
 
     if is_o1 and "<think>" in raw:
-        return {"score": 0.0, "status": "FAIL", "note": "CRITICAL: Leaked <think> tag (DeepSeek-R1 spoofed as o1)", "crit": True}
+        return {"score": 0.0, "status": "FAIL", "note": "CRITICAL: Leaked <think> tag (DeepSeek-R1 spoofed as o1)", "crit": True, "raw": raw}
 
     if any(x in raw for x in ["0.05", "5 cents", "five cents"]):
-        return {"score": 1.0, "status": "PASS", "note": "Cognitive reflection trap solved cleanly"}
-    return {"score": 0.4, "status": "WARN", "note": "Cognitive reflection mismatch"}
+        return {"score": 1.0, "status": "PASS", "note": "Cognitive reflection trap solved cleanly", "raw": raw}
+    return {"score": 0.4, "status": "WARN", "note": "Cognitive reflection mismatch", "raw": raw}
 
 
 def vec10_type_logic(client: ApiClient, model: str):
@@ -432,8 +432,8 @@ def vec10_type_logic(client: ApiClient, model: str):
     res = client.call_model(model, [{"role": "user", "content": prompt}], max_tokens=250)
     low = res["content"].lower()
     if any(x in low for x in ["for<'a>", "higher-ranked", "hrtb", "lifetime"]):
-        return {"score": 1.0, "status": "PASS", "note": "High-order HRTB lifetime reasoning solved"}
-    return {"score": 0.0, "status": "FAIL", "note": "Failed type-level borrow reasoning"}
+        return {"score": 1.0, "status": "PASS", "note": "High-order HRTB lifetime reasoning solved", "raw": res["content"]}
+    return {"score": 0.0, "status": "FAIL", "note": "Failed type-level borrow reasoning", "raw": res["content"]}
 
 
 # ----------------------------------------------------
@@ -459,6 +459,7 @@ Examples:
     parser.add_argument("--models-only", action="store_true", help="Audit upstream /v1/models catalog only and exit")
     parser.add_argument("--lang", default="en", choices=["en", "id"], help="Output language (default: en)")
     parser.add_argument("--json", action="store_true", help="Output pure JSON report for CI/CD pipelines")
+    parser.add_argument("-V", "--verbose", action="store_true", help="Print raw model responses under each vector")
     parser.add_argument("--timeout", type=int, default=30, help="Per-request timeout in seconds (default: 30)")
     parser.add_argument("-v", "--version", action="version", version="1.0.1")
 
@@ -561,6 +562,10 @@ Examples:
                 elif res["status"] == "FAIL":
                     badge = f"{C_RED}[FAIL]{C_RESET}"
                 print(f"{badge}  {res.get('note', '')}")
+                if args.verbose and res.get("raw"):
+                    lines = str(res["raw"]).strip().split("\n")
+                    for l in lines:
+                        print(f"      {C_DIM}| {l}{C_RESET}")
         except Exception as e:
             results.append({"id": v["id"], "name": v["name"], "score": 0.0, "status": "FAIL", "note": f"Error: {e}"})
             if not args.json:

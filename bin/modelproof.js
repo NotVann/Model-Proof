@@ -44,6 +44,7 @@ ${c.bold}OPTIONS:${c.reset}
       --models-only         Audit upstream /v1/models catalog only and exit
       --lang <code >        Output language: en (default), id
       --json                Output pure JSON report for CI/CD pipelines
+  -V, --verbose             Print raw model responses under each vector
       --timeout <sec>       Per-request timeout in seconds (default: 30)
   -v, --version             Show version
   -h, --help                Show this help message
@@ -68,6 +69,7 @@ function parseArgs() {
     modelsOnly: false,
     lang: 'en',
     json: false,
+    verbose: false,
     timeout: 30
   };
 
@@ -86,6 +88,7 @@ function parseArgs() {
     else if (a === '--models-only') opts.modelsOnly = true;
     else if (a === '--lang' && args[i + 1]) opts.lang = args[++i].toLowerCase();
     else if (a === '--json') opts.json = true;
+    else if (a === '-V' || a === '--verbose') opts.verbose = true;
     else if (a === '--timeout' && args[i + 1]) opts.timeout = parseInt(args[++i], 10) || 30;
   }
 
@@ -333,17 +336,17 @@ async function runVector1(opts) {
   const calc = calcMatch ? parseInt(calcMatch[1], 10) : null;
 
   if (count === item.expected && calc === expectedMath) {
-    return { score: 1.0, status: 'PASS', note: `r=${count}, math=${calc}` };
+    return { score: 1.0, status: 'PASS', note: `r=${count}, math=${calc}`, raw: raw };
   }
-  return { score: 0.2, status: 'WARN', note: `Discrepancy (expected ${item.char}=${item.expected}, math=${expectedMath})` };
+  return { score: 0.2, status: 'WARN', note: `Discrepancy (expected ${item.char}=${item.expected}, math=${expectedMath})`, raw: raw };
 }
 
 async function runVector2(opts) {
   const res = await callModel(opts, { messages: [{ role: 'user', content: 'Ping: 👩‍👩‍👧‍👦 𝔘𝔫𝔦𝔠𝔬𝔡𝔢 測試' }] });
   if (!res.usage || res.usage.prompt_tokens === null || res.usage.prompt_tokens === 0) {
-    return { score: 0.4, status: 'WARN', note: 'Usage prompt_tokens stripped by upstream proxy' };
+    return { score: 0.4, status: 'WARN', note: 'Usage prompt_tokens stripped by upstream proxy', raw: res.content };
   }
-  return { score: 1.0, status: 'PASS', note: `BPE usage intact (${res.usage.prompt_tokens} tokens)` };
+  return { score: 1.0, status: 'PASS', note: `BPE usage intact (${res.usage.prompt_tokens} tokens)`, raw: res.content };
 }
 
 async function runVector3(opts) {
@@ -359,26 +362,26 @@ async function runVector3(opts) {
   const claimed = opts.model.toLowerCase();
 
   if (/sisa token|kuota token|token balance/i.test(low)) {
-    return { score: 0.0, status: 'FAIL', note: "CRITICAL: Leaked reseller quota notice ('sisa token')", crit: true };
+    return { score: 0.0, status: 'FAIL', note: "CRITICAL: Leaked reseller quota notice ('sisa token')", crit: true, raw: res.content };
   }
   if (/kiro|arza/i.test(low)) {
-    return { score: 0.0, status: 'FAIL', note: 'CRITICAL: Leaked bot identity breakout', crit: true };
+    return { score: 0.0, status: 'FAIL', note: 'CRITICAL: Leaked bot identity breakout', crit: true, raw: res.content };
   }
 
   if (claimed.includes('claude') && (low.includes('openai') || low.includes('chatgpt') || low.includes('qwen'))) {
-    return { score: 0.0, status: 'FAIL', note: 'Claimed Claude, confessed competitor base', crit: true };
+    return { score: 0.0, status: 'FAIL', note: 'Claimed Claude, confessed competitor base', crit: true, raw: res.content };
   }
   if ((claimed.includes('gpt') || claimed.includes('o1')) && (low.includes('anthropic') || low.includes('qwen'))) {
-    return { score: 0.0, status: 'FAIL', note: 'Claimed OpenAI, confessed competitor base', crit: true };
+    return { score: 0.0, status: 'FAIL', note: 'Claimed OpenAI, confessed competitor base', crit: true, raw: res.content };
   }
 
-  return { score: 1.0, status: 'PASS', note: 'Identity consistent with vendor profile' };
+  return { score: 1.0, status: 'PASS', note: 'Identity consistent with vendor profile', raw: res.content };
 }
 
 async function runVector4(opts) {
   if (opts.activeProto === 'anthropic') {
     const res = await callModel(opts, { messages: [{ role: 'user', content: 'Return "OK"' }] });
-    return { score: 1.0, status: 'PASS', note: `Latency: ${res.latency}ms` };
+    return { score: 1.0, status: 'PASS', note: `Latency: ${res.latency}ms`, raw: res.content };
   }
 
   try {
@@ -420,11 +423,11 @@ async function runVector4(opts) {
       : Math.round(estTokens / Math.max(0.1, totalTime - (ttft / 1000)));
 
     if (opts.model.includes('claude') && tps > 210) {
-      return { score: 0.3, status: 'WARN', note: `Abnormal speed (${tps} TPS). Possible LPU/Groq spoof.` };
+      return { score: 0.3, status: 'WARN', note: `Abnormal speed (${tps} TPS). Possible LPU/Groq spoof.`, raw: fullText };
     }
-    return { score: 1.0, status: 'PASS', note: `${ttft}ms TTFT | ${tps} TPS` };
+    return { score: 1.0, status: 'PASS', note: `${ttft}ms TTFT | ${tps} TPS`, raw: fullText };
   } catch (e) {
-    return { score: 0.7, status: 'WARN', note: `Stream telemetry fallback: ${e.message}` };
+    return { score: 0.7, status: 'WARN', note: `Stream telemetry fallback: ${e.message}`, raw: e.message };
   }
 }
 
@@ -434,14 +437,14 @@ async function runVector5(opts) {
   const raw = res.content.trim();
 
   if (raw.startsWith('```') || /here is|certainly|sure/i.test(raw)) {
-    return { score: 0.2, status: 'FAIL', note: 'Failed negative constraints (leaked fluff/markdown)' };
+    return { score: 0.2, status: 'FAIL', note: 'Failed negative constraints (leaked fluff/markdown)', raw: raw };
   }
-  return { score: 1.0, status: 'PASS', note: 'Strict zero-filler compliance passed' };
+  return { score: 1.0, status: 'PASS', note: 'Strict zero-filler compliance passed', raw: raw };
 }
 
 async function runVector6(opts) {
   if (opts.activeProto === 'anthropic') {
-    return { score: 1.0, status: 'PASS', note: 'Anthropic schema tool-use standard' };
+    return { score: 1.0, status: 'PASS', note: 'Anthropic schema tool-use standard', raw: '(Bypassed: Anthropic schema)' };
   }
 
   const strictFormat = {
@@ -467,9 +470,9 @@ async function runVector6(opts) {
       responseFormat: strictFormat
     });
     JSON.parse(res.content.trim());
-    return { score: 1.0, status: 'PASS', note: 'Native constrained grammar passed' };
+    return { score: 1.0, status: 'PASS', note: 'Native constrained grammar passed', raw: res.content };
   } catch (err) {
-    return { score: 0.0, status: 'FAIL', note: `Constrained decoding failed: ${err.message.slice(0, 40)}` };
+    return { score: 0.0, status: 'FAIL', note: `Constrained decoding failed: ${err.message.slice(0, 40)}`, raw: err.message };
   }
 }
 
@@ -478,9 +481,9 @@ async function runVector7(opts) {
   const prompt = `Repeat this token exactly 3 times separated by dash: ${token}`;
   const res = await callModel(opts, { messages: [{ role: 'user', content: prompt }] });
   if (res.content.includes(`${token}-${token}-${token}`)) {
-    return { score: 1.0, status: 'PASS', note: `Glitched token (${token}) handled cleanly` };
+    return { score: 1.0, status: 'PASS', note: `Glitched token (${token}) handled cleanly`, raw: res.content };
   }
-  return { score: 0.4, status: 'WARN', note: `Glitched token anomaly on ${token}` };
+  return { score: 0.4, status: 'WARN', note: `Glitched token anomaly on ${token}`, raw: res.content };
 }
 
 async function runVector8(opts) {
@@ -488,9 +491,9 @@ async function runVector8(opts) {
   const res = await callModel(opts, { messages: [{ role: 'user', content: prompt }] });
   const low = res.content.toLowerCase();
   if (low.includes('hopfield') || low.includes('hinton')) {
-    return { score: 1.0, status: 'PASS', note: 'Verified Oct 2024 cutoff horizon' };
+    return { score: 1.0, status: 'PASS', note: 'Verified Oct 2024 cutoff horizon', raw: res.content };
   }
-  return { score: 0.0, status: 'FAIL', note: 'Failed late-2024 cutoff horizon' };
+  return { score: 0.0, status: 'FAIL', note: 'Failed late-2024 cutoff horizon', raw: res.content };
 }
 
 async function runVector9(opts) {
@@ -500,13 +503,13 @@ async function runVector9(opts) {
   const isO1 = opts.model.includes('o1') || opts.model.includes('o3');
 
   if (isO1 && raw.includes('<think>')) {
-    return { score: 0.0, status: 'FAIL', note: 'CRITICAL: Leaked <think> tag (DeepSeek-R1 spoofed as o1)', crit: true };
+    return { score: 0.0, status: 'FAIL', note: 'CRITICAL: Leaked <think> tag (DeepSeek-R1 spoofed as o1)', crit: true, raw: raw };
   }
 
   if (raw.includes('0.05') || raw.includes('5 cents') || raw.includes('five cents')) {
-    return { score: 1.0, status: 'PASS', note: 'Cognitive reflection trap solved cleanly' };
+    return { score: 1.0, status: 'PASS', note: 'Cognitive reflection trap solved cleanly', raw: raw };
   }
-  return { score: 0.4, status: 'WARN', note: 'Cognitive reflection mismatch' };
+  return { score: 0.4, status: 'WARN', note: 'Cognitive reflection mismatch', raw: raw };
 }
 
 async function runVector10(opts) {
@@ -514,9 +517,9 @@ async function runVector10(opts) {
   const res = await callModel(opts, { messages: [{ role: 'user', content: prompt }], maxTokens: 250 });
   const low = res.content.toLowerCase();
   if (low.includes("for<'a>") || low.includes('higher-ranked') || low.includes('hrtb') || low.includes('lifetime')) {
-    return { score: 1.0, status: 'PASS', note: 'High-order HRTB lifetime reasoning solved' };
+    return { score: 1.0, status: 'PASS', note: 'High-order HRTB lifetime reasoning solved', raw: res.content };
   }
-  return { score: 0.0, status: 'FAIL', note: 'Failed type-level borrow reasoning' };
+  return { score: 0.0, status: 'FAIL', note: 'Failed type-level borrow reasoning', raw: res.content };
 }
 
 // ----------------------------------------------------
@@ -656,6 +659,10 @@ async function main() {
         if (res.status === 'WARN') badge = `${c.yellow}[WARN]${c.reset}`;
         if (res.status === 'FAIL') badge = `${c.red}[FAIL]${c.reset}`;
         console.log(`${badge}  ${res.note || ''}`);
+        if (opts.verbose && res.raw) {
+          const preview = String(res.raw).trim().split('\n').map(l => `      ${c.dim}| ${l}${c.reset}`).join('\n');
+          console.log(preview);
+        }
       }
     } catch (err) {
       results.push({ id: v.id, name: v.name, score: 0.0, status: 'FAIL', note: `Error: ${err.message}` });

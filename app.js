@@ -228,6 +228,8 @@ const TRANSLATIONS = {
     endpointProviderTenant: 'Penyedia Endpoint / Tenant:',
     customModelString: '+ Model Kustom Manual...',
     manualBadge: 'MANUAL',
+    viewResponse: 'Lihat Respons',
+    hideResponse: 'Tutup Respons',
     toastDraftCopied: 'Draft komplain berhasil disalin ke clipboard!',
     toastCopyFailed: 'Gagal menyalin draft: '
   },
@@ -318,6 +320,8 @@ const TRANSLATIONS = {
     endpointProviderTenant: 'Endpoint Provider / Tenant:',
     customModelString: '+ Custom Model String...',
     manualBadge: 'MANUAL',
+    viewResponse: 'View Response',
+    hideResponse: 'Hide Response',
     toastDraftCopied: 'Dispute evidence copied to clipboard!',
     toastCopyFailed: 'Failed to copy draft: '
   }
@@ -622,17 +626,48 @@ function renderPipelineRows() {
     const initialStatus = state.lang === 'en' ? 'READY' : 'SIAP';
     const row = document.createElement('div');
     row.id = `test-row-${t.id}`;
-    row.className = 'p-2 sm:p-2.5 rounded bg-zinc-950/60 border border-zinc-800/60 flex items-start justify-between gap-2.5 sm:gap-3 transition';
+    row.className = 'p-2 sm:p-2.5 rounded bg-zinc-950/60 border border-zinc-800/60 transition flex flex-col gap-2';
     row.innerHTML = `
-      <div class="space-y-0.5 min-w-0 flex-1">
-        <div class="flex items-center gap-2">
-          <span class="test-icon text-xs text-zinc-600 font-mono shrink-0 flex items-center justify-center w-4 h-4"><i class="fa-regular fa-circle"></i></span>
-          <span class="text-xs font-mono font-medium text-zinc-300 truncate">${String(t.id).padStart(2, '0')}. ${info.name}</span>
+      <div class="flex items-start justify-between gap-2.5 sm:gap-3 w-full">
+        <div class="space-y-0.5 min-w-0 flex-1">
+          <div class="flex items-center gap-2">
+            <span class="test-icon text-xs text-zinc-600 font-mono shrink-0 flex items-center justify-center w-4 h-4"><i class="fa-regular fa-circle"></i></span>
+            <span class="text-xs font-mono font-medium text-zinc-300 truncate">${String(t.id).padStart(2, '0')}. ${info.name}</span>
+          </div>
+          <p class="text-[11px] text-zinc-500 test-detail font-sans pl-6 break-words">${info.desc}</p>
         </div>
-        <p class="text-[11px] text-zinc-500 test-detail font-sans pl-6 break-words">${info.desc}</p>
+        <div class="flex items-center gap-1.5 shrink-0 mt-0.5">
+          <button type="button" class="btn-toggle-response hidden text-[9px] font-mono px-1.5 py-0.5 rounded bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 border border-zinc-700/80 transition flex items-center gap-1">
+            <i class="fa-solid fa-code text-[8px] text-emerald-400"></i>
+            <span class="label-toggle-resp">${state.lang === 'en' ? 'Response' : 'Respons'}</span>
+          </button>
+          <span class="test-status font-mono text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 uppercase tracking-wider shrink-0">${initialStatus}</span>
+        </div>
       </div>
-      <span class="test-status font-mono text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 uppercase tracking-wider shrink-0 mt-0.5">${initialStatus}</span>
+      <div class="test-response-drawer hidden mt-1 border-t border-zinc-800/80 pt-2 space-y-1.5">
+        <div class="flex items-center justify-between text-[10px] text-zinc-500 font-mono">
+          <span class="flex items-center gap-1"><i class="fa-solid fa-terminal text-cyan-400"></i> RAW UPSTREAM OUTPUT</span>
+          <span class="test-response-meta text-zinc-400"></span>
+        </div>
+        <pre class="test-response-pre max-h-48 overflow-y-auto p-2 rounded bg-black/60 border border-zinc-800 text-[11px] font-mono text-zinc-300 whitespace-pre-wrap break-all select-text selection:bg-emerald-950 selection:text-emerald-300"></pre>
+      </div>
     `;
+
+    // Toggle button handler
+    const btnToggle = row.querySelector('.btn-toggle-response');
+    const drawer = row.querySelector('.test-response-drawer');
+    btnToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isClosed = drawer.classList.contains('hidden');
+      if (isClosed) {
+        drawer.classList.remove('hidden');
+        btnToggle.classList.add('bg-zinc-700', 'text-white');
+      } else {
+        drawer.classList.add('hidden');
+        btnToggle.classList.remove('bg-zinc-700', 'text-white');
+      }
+    });
+
     el.testPipelineContainer.appendChild(row);
   });
 }
@@ -1368,14 +1403,23 @@ async function callModel({ messages, stream = false, maxTokens = 500, temperatur
   return { content, usage, returnedModel, latency, raw: json };
 }
 
-function updateTestRow(testId, status, detailText = null) {
+function updateTestRow(testId, status, detailText = null, rawResponse = null, metaInfo = null) {
   const row = document.getElementById(`test-row-${testId}`);
   if (!row) return;
   const icon = row.querySelector('.test-icon');
   const statusBadge = row.querySelector('.test-status');
   const detail = row.querySelector('.test-detail');
+  const btnToggle = row.querySelector('.btn-toggle-response');
+  const drawerPre = row.querySelector('.test-response-pre');
+  const drawerMeta = row.querySelector('.test-response-meta');
 
   if (detailText) detail.textContent = detailText;
+
+  if (rawResponse !== null && rawResponse !== undefined) {
+    if (drawerPre) drawerPre.textContent = typeof rawResponse === 'object' ? JSON.stringify(rawResponse, null, 2) : String(rawResponse);
+    if (drawerMeta && metaInfo) drawerMeta.textContent = metaInfo;
+    if (btnToggle) btnToggle.classList.remove('hidden');
+  }
 
   if (status === 'RUNNING') {
     icon.innerHTML = `<svg class="w-3.5 h-3.5 text-cyan-400 animate-spin-fast shrink-0 inline-block align-middle" viewBox="0 0 50 50">
@@ -1400,6 +1444,9 @@ function updateTestRow(testId, status, detailText = null) {
     icon.innerHTML = `<i class="fa-regular fa-circle text-xs text-zinc-600"></i>`;
     statusBadge.textContent = state.lang === 'en' ? 'READY' : 'SIAP';
     statusBadge.className = 'test-status font-mono text-[10px] px-2 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 uppercase';
+    if (btnToggle) btnToggle.classList.add('hidden');
+    const drawer = row.querySelector('.test-response-drawer');
+    if (drawer) drawer.classList.add('hidden');
   }
 }
 
@@ -1733,9 +1780,10 @@ Respond strictly in JSON: {"char_count": <number>, "reversed": "<string>", "math
     const isRevMatch = reportedReversed === expectedReversed;
     const isMathMatch = reportedMath === expectedMath;
 
+    const respMeta = `${res.latency}ms | Model: ${res.returnedModel || state.claimedModel}`;
     if (isCountMatch && isRevMatch && isMathMatch) {
-      updateTestRow(1, 'PASSED', `Passed (${selectedItem.char}=${selectedItem.expected}, math=${expectedMath}).`);
-      return { score: 1.0 };
+      updateTestRow(1, 'PASSED', `Passed (${selectedItem.char}=${selectedItem.expected}, math=${expectedMath}).`, res.content, respMeta);
+      return { score: 1.0, rawResponse: res.content };
     }
     
     auditState.findings.push({
@@ -1745,8 +1793,8 @@ Respond strictly in JSON: {"char_count": <number>, "reversed": "<string>", "math
       desc: `Model menghitung jumlah huruf '${selectedItem.char}' keliru (dihasilkan: ${reportedCount}, seharusnya: ${selectedItem.expected}) atau salah hitung aritmatika (${reportedMath} vs ${expectedMath}). Model tier flagship selalu menjawab dengan benar.`
     });
 
-    updateTestRow(1, 'FAILED', `Logic error: '${selectedItem.char}'=${reportedCount} (expected ${selectedItem.expected}), math=${reportedMath} (expected ${expectedMath}).`);
-    return { score: 0.0 };
+    updateTestRow(1, 'FAILED', `Logic error: '${selectedItem.char}'=${reportedCount} (expected ${selectedItem.expected}), math=${reportedMath} (expected ${expectedMath}).`, res.content, respMeta);
+    return { score: 0.0, rawResponse: res.content };
   } catch (err) {
     auditState.findings.push({
       category: 'logic',
@@ -1754,8 +1802,8 @@ Respond strictly in JSON: {"char_count": <number>, "reversed": "<string>", "math
       headline: 'Gagal Mematuhi Format Respon JSON',
       desc: `Model gagal menghasilkan format JSON murni: ${err.message}. Model kemungkinan tier rendah atau terganggu injected prompt dari proxy penjual.`
     });
-    updateTestRow(1, 'FAILED', `Parse error: ${err.message}`);
-    return { score: 0.0 };
+    updateTestRow(1, 'FAILED', `Parse error: ${err.message}`, res?.content || '(No response text)', `${res?.latency || 0}ms`);
+    return { score: 0.0, rawResponse: res?.content };
   }
 }
 
@@ -1787,8 +1835,9 @@ async function runTest2() {
     });
   }
 
+  const respMeta = `${res.latency}ms | Usage: ${JSON.stringify(res.usage || {})}`;
   if (tokens === undefined || tokens === null) {
-    updateTestRow(2, 'WARNING', 'Usage prompt_tokens stripped by upstream proxy.');
+    updateTestRow(2, 'WARNING', 'Usage prompt_tokens stripped by upstream proxy.', res.content || JSON.stringify(res.raw), respMeta);
     el.statTokenMatch.textContent = 'Stripped';
     auditState.findings.push({
       category: 'tokens',
@@ -1796,12 +1845,12 @@ async function runTest2() {
       headline: 'Metrik Token Dihapus oleh Proxy Penjual',
       desc: 'Proxy upstream menghapus data pemakaian token (prompt_tokens = null) untuk menyembunyikan tokenizer asli model.'
     });
-    return { score: 0.5 };
+    return { score: 0.5, rawResponse: res.content };
   }
 
   // Arzastore / reseller token manipulation check
   if (tokens === 0) {
-    updateTestRow(2, 'FAILED', 'Manipulated prompt_tokens (reported 0). Upstream proxy fabrication.');
+    updateTestRow(2, 'FAILED', 'Manipulated prompt_tokens (reported 0). Upstream proxy fabrication.', res.content || JSON.stringify(res.raw), respMeta);
     el.statTokenMatch.textContent = '0 tk (Fake)';
     auditState.findings.push({
       category: 'tokens',
@@ -1809,24 +1858,24 @@ async function runTest2() {
       headline: 'Metrik Token Dimanipulasi Menjadi 0',
       desc: 'Proxy penjual memalsukan nilai token input menjadi 0. Model AI asli dari OpenAI/Anthropic selalu menghitung token input dengan akurat.'
     });
-    return { score: 0.0 };
+    return { score: 0.0, rawResponse: res.content };
   }
 
   el.statTokenMatch.textContent = `${tokens} tk`;
   const isGpt4o = state.claimedModel.includes('4o');
   if (isGpt4o && (tokens > 65 || tokens < 20)) {
-    updateTestRow(2, 'WARNING', `Anomalous token count (${tokens}). Tokenizer mismatch with o200k.`);
+    updateTestRow(2, 'WARNING', `Anomalous token count (${tokens}). Tokenizer mismatch with o200k.`, res.content || JSON.stringify(res.raw), respMeta);
     auditState.findings.push({
       category: 'tokens',
       severity: 'warning',
       headline: 'Tokenizer Berbeda dari Standar Resmi GPT-4o',
       desc: `Jumlah token (${tokens}) tidak sesuai dengan kamus BPE o200k resmi OpenAI. Mengindikasikan request diarahkan ke arsitektur lain.`
     });
-    return { score: 0.3 };
+    return { score: 0.3, rawResponse: res.content };
   }
 
-  updateTestRow(2, 'PASSED', `Reported ${tokens} tokens (consistent with target BPE).`);
-  return { score: 1.0 };
+  updateTestRow(2, 'PASSED', `Reported ${tokens} tokens (consistent with target BPE).`, res.content || JSON.stringify(res.raw), respMeta);
+  return { score: 1.0, rawResponse: res.content };
 }
 
 // 3. System Instruction & Identity Leak (Dynamic Adversarial Breakout)
@@ -1919,8 +1968,9 @@ async function runTest3() {
     });
   }
 
-  updateTestRow(3, passed ? 'PASSED' : 'FAILED', note);
-  return { score: passed ? 1.0 : 0.0 };
+  const respMeta = `${res.latency}ms | Model: ${res.returnedModel || state.claimedModel}`;
+  updateTestRow(3, passed ? 'PASSED' : 'FAILED', note, raw, respMeta);
+  return { score: passed ? 1.0 : 0.0, rawResponse: raw };
 }
 
 // 4. Hardware Telemetry & TPS Profiling
@@ -1972,22 +2022,23 @@ async function runTest4() {
     el.statTps.textContent = `${tps} TPS`;
     appendLog(`[Vector 4] TTFT: ${ttft}ms | Speed: ${tps} TPS`);
 
+    const respMeta = `TTFT: ${ttft}ms | ${tps} TPS | Stream chunks: ${chunks}`;
     if (state.claimedModel.includes('claude') && tps > 210) {
-      updateTestRow(4, 'WARNING', `Abnormal speed (${tps} TPS). Claude Sonnet runs ~50-80 TPS. Possible Groq spoof.`);
+      updateTestRow(4, 'WARNING', `Abnormal speed (${tps} TPS). Claude Sonnet runs ~50-80 TPS. Possible Groq spoof.`, fullText, respMeta);
       auditState.findings.push({
         category: 'hardware',
         severity: 'warning',
         headline: `Kecepatan Generasi Mencurigakan (${tps} TPS)`,
         desc: `Claude Sonnet resmi biasanya menghasilkan ~50-80 token/detik. Kecepatan >210 TPS mengindikasikan model kecil (Llama 8B) yang di-host di chip LPU (Groq/Cerebras).`
       });
-      return { score: 0.3 };
+      return { score: 0.3, rawResponse: fullText };
     }
 
-    updateTestRow(4, 'PASSED', `Healthy inference profile (${ttft}ms TTFT, ${tps} TPS).`);
-    return { score: 1.0 };
+    updateTestRow(4, 'PASSED', `Healthy inference profile (${ttft}ms TTFT, ${tps} TPS).`, fullText, respMeta);
+    return { score: 1.0, rawResponse: fullText };
   } catch (err) {
-    updateTestRow(4, 'WARNING', `Stream test skipped: ${err.message}`);
-    return { score: 0.5 };
+    updateTestRow(4, 'WARNING', `Stream test skipped: ${err.message}`, `Stream error: ${err.message}`);
+    return { score: 0.5, rawResponse: err.message };
   }
 }
 
@@ -2020,9 +2071,10 @@ async function runTest5() {
   const raw = res.content.trim();
   const isValid = chosenTask.validator(raw);
 
+  const respMeta = `${res.latency}ms | Task: ${chosenTask.name}`;
   if (isValid) {
-    updateTestRow(5, 'PASSED', 'Followed all negative constraints without filler.');
-    return { score: 1.0 };
+    updateTestRow(5, 'PASSED', 'Followed all negative constraints without filler.', raw, respMeta);
+    return { score: 1.0, rawResponse: raw };
   }
   
   auditState.findings.push({
@@ -2032,8 +2084,8 @@ async function runTest5() {
     desc: `Model membocorkan kata-kata obrolan pembuka (basa-basi) atau format markdown meskipun diinstruksikan tegas untuk menghindarinya pada tes ${chosenTask.name}.`
   });
 
-  updateTestRow(5, 'FAILED', 'Failed negative constraints (leaked filler or markdown).');
-  return { score: 0.0 };
+  updateTestRow(5, 'FAILED', 'Failed negative constraints (leaked filler or markdown).', raw, respMeta);
+  return { score: 0.0, rawResponse: raw };
 }
 
 // 6. Strict JSON Schema / Constrained Decoding
@@ -2041,10 +2093,11 @@ async function runTest6() {
   updateTestRow(6, 'RUNNING');
   appendLog('[Vector 6] Probing Native Grammar / Constrained Decoding...');
   if ((state.detectedProtocol || 'openai') !== 'openai') {
-    updateTestRow(6, 'PASSED', 'Grammar test bypassed (OpenAI-specific vector).');
-    return { score: 1.0 };
+    updateTestRow(6, 'PASSED', 'Grammar test bypassed (OpenAI-specific vector).', '(Bypassed: non-OpenAI protocol)', 'Protocol standard');
+    return { score: 1.0, rawResponse: '(Bypassed)' };
   }
 
+  let res = null;
   try {
     const strictFormat = {
       type: "json_schema",
@@ -2063,14 +2116,14 @@ async function runTest6() {
       }
     };
 
-    const res = await callModel({
+    res = await callModel({
       messages: [{ role: 'user', content: 'Generate dummy entropy_key and checksum.' }],
       responseFormat: strictFormat
     });
 
     JSON.parse(res.content.trim());
-    updateTestRow(6, 'PASSED', 'Passed strict grammar-engine constrained decoding.');
-    return { score: 1.0 };
+    updateTestRow(6, 'PASSED', 'Passed strict grammar-engine constrained decoding.', res.content, `${res.latency}ms`);
+    return { score: 1.0, rawResponse: res.content };
   } catch (err) {
     auditState.findings.push({
       category: 'compliance',
@@ -2078,8 +2131,8 @@ async function runTest6() {
       headline: 'Tidak Mendukung JSON Schema Strict Sampling',
       desc: `Proxy penjual gagal mengeksekusi parameter JSON schema native (${err.message}). Mesin proxy tidak memiliki fitur constrained grammar decoding.`
     });
-    updateTestRow(6, 'FAILED', `Grammar failure: ${err.message}. Proxy lacks native constrained sampling.`);
-    return { score: 0.0 };
+    updateTestRow(6, 'FAILED', `Grammar failure: ${err.message}. Proxy lacks native constrained sampling.`, res?.content || err.message, `${res?.latency || 0}ms`);
+    return { score: 0.0, rawResponse: res?.content || err.message };
   }
 }
 
@@ -2102,13 +2155,14 @@ async function runTest7() {
   const res = await callModel({ messages: [{ role: 'user', content: prompt }] });
   const raw = res.content.trim();
   const expectedSeq = `${chosenToken}-${chosenToken}-${chosenToken}`;
+  const respMeta = `${res.latency}ms | Token: ${chosenToken}`;
 
   if (raw.includes(expectedSeq)) {
-    updateTestRow(7, 'PASSED', `Glitched token (${chosenToken}) handled cleanly without embedding hallucination.`);
-    return { score: 1.0 };
+    updateTestRow(7, 'PASSED', `Glitched token (${chosenToken}) handled cleanly without embedding hallucination.`, raw, respMeta);
+    return { score: 1.0, rawResponse: raw };
   }
-  updateTestRow(7, 'WARNING', `Glitched token (${chosenToken}) triggered anomaly or repetition failure.`);
-  return { score: 0.4 };
+  updateTestRow(7, 'WARNING', `Glitched token (${chosenToken}) triggered anomaly or repetition failure.`, raw, respMeta);
+  return { score: 0.4, rawResponse: raw };
 }
 
 // 8. Temporal Cutoff Horizon (Dynamic Late-2024 Event Pool)
@@ -2143,10 +2197,11 @@ async function runTest8() {
 
   const res = await callModel({ messages: [{ role: 'user', content: chosenEvent.prompt }] });
   const low = res.content.toLowerCase();
+  const respMeta = `${res.latency}ms | Event: ${chosenEvent.name}`;
 
   if (chosenEvent.check(low)) {
-    updateTestRow(8, 'PASSED', `Cutoff verified fresh (recognized ${chosenEvent.name}).`);
-    return { score: 1.0 };
+    updateTestRow(8, 'PASSED', `Cutoff verified fresh (recognized ${chosenEvent.name}).`, res.content, respMeta);
+    return { score: 1.0, rawResponse: res.content };
   }
 
   auditState.findings.push({
@@ -2156,8 +2211,8 @@ async function runTest8() {
     desc: `Model tidak mengenali peristiwa Q4 2024: ${chosenEvent.name}. Model yang digunakan memiliki basis data lawas (knowledge cutoff 2023 atau pertengahan 2024).`
   });
 
-  updateTestRow(8, 'FAILED', `Cutoff test failed on ${chosenEvent.name}. Stale cutoff horizon.`);
-  return { score: 0.0 };
+  updateTestRow(8, 'FAILED', `Cutoff test failed on ${chosenEvent.name}. Stale cutoff horizon.`, res.content, respMeta);
+  return { score: 0.0, rawResponse: res.content };
 }
 
 // 9. Reasoning CoT & Delimiter Structure (Dynamic Cognitive Traps)
@@ -2193,6 +2248,7 @@ async function runTest9() {
   const res = await callModel({ messages: [{ role: 'user', content: chosenTrap.prompt }], maxTokens: 400 });
   const raw = res.content;
   const isO1 = state.claimedModel.includes('o1') || state.claimedModel.includes('o3');
+  const respMeta = `${res.latency}ms | Puzzle: ${chosenTrap.name}`;
 
   // If claimed o1, but output has raw <think> tags → It's DeepSeek-R1 spoofed as o1
   if (isO1 && raw.includes('<think>')) {
@@ -2202,13 +2258,13 @@ async function runTest9() {
       headline: 'Bocoran Delimiter <think> (DeepSeek-R1 Spoofing)',
       desc: 'Model diklaim sebagai OpenAI o1/o3, namun output membocorkan tag <think> khas DeepSeek-R1. Model 100% dipalsukan!'
     });
-    updateTestRow(9, 'FAILED', 'SPOOF DETECTED: Claimed o1, but returned DeepSeek-R1 <think> block!');
-    return { score: 0.0 };
+    updateTestRow(9, 'FAILED', 'SPOOF DETECTED: Claimed o1, but returned DeepSeek-R1 <think> block!', raw, respMeta);
+    return { score: 0.0, rawResponse: raw };
   }
 
   if (chosenTrap.check(raw)) {
-    updateTestRow(9, 'PASSED', `Passed reflective reasoning logic (${chosenTrap.name}).`);
-    return { score: 1.0 };
+    updateTestRow(9, 'PASSED', `Passed reflective reasoning logic (${chosenTrap.name}).`, raw, respMeta);
+    return { score: 1.0, rawResponse: raw };
   }
 
   auditState.findings.push({
@@ -2218,8 +2274,8 @@ async function runTest9() {
     desc: `Model terjebak bias heuristik pada soal refleksi kognitif ${chosenTrap.name}. Menandakan model tidak memiliki kapabilitas high-order reasoning.`
   });
 
-  updateTestRow(9, 'FAILED', `Reasoning failure on ${chosenTrap.name}.`);
-  return { score: 0.0 };
+  updateTestRow(9, 'FAILED', `Reasoning failure on ${chosenTrap.name}.`, raw, respMeta);
+  return { score: 0.0, rawResponse: raw };
 }
 
 // 10. High-Order Type Logic & Compile Diagnostics (Dynamic Rust / TS)
@@ -2244,10 +2300,11 @@ async function runTest10() {
 
   const res = await callModel({ messages: [{ role: 'user', content: chosenProbe.prompt }], maxTokens: 250 });
   const low = res.content.toLowerCase();
+  const respMeta = `${res.latency}ms | Probe: ${chosenProbe.name}`;
 
   if (chosenProbe.check(low)) {
-    updateTestRow(10, 'PASSED', `Solved high-order type reasoning (${chosenProbe.name}).`);
-    return { score: 1.0 };
+    updateTestRow(10, 'PASSED', `Solved high-order type reasoning (${chosenProbe.name}).`, res.content, respMeta);
+    return { score: 1.0, rawResponse: res.content };
   }
 
   auditState.findings.push({
@@ -2257,8 +2314,8 @@ async function runTest10() {
     desc: `Model tidak memahami konsep compiler tingkat tinggi (${chosenProbe.name}). Indikasi kuat model kecil yang minim pemahaman sintaks mendalam.`
   });
 
-  updateTestRow(10, 'FAILED', `Failed type-level puzzle (${chosenProbe.name}). Mini model detected.`);
-  return { score: 0.0 };
+  updateTestRow(10, 'FAILED', `Failed type-level puzzle (${chosenProbe.name}). Mini model detected.`, res.content, respMeta);
+  return { score: 0.0, rawResponse: res.content };
 }
 
 // ----------------------------------------------------
