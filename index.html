@@ -114,15 +114,21 @@
         </div>
       </div>
       
-      <div class="flex items-center space-x-3 sm:space-x-4">
+      <div class="flex items-center space-x-2 sm:space-x-4">
+        <!-- Language Switcher -->
+        <div class="flex items-center bg-zinc-950 p-0.5 rounded-md border border-zinc-800 text-[10px] font-mono">
+          <button id="lang-btn-id" type="button" class="px-2 py-0.5 rounded transition font-bold bg-zinc-850 text-emerald-400">ID</button>
+          <button id="lang-btn-en" type="button" class="px-2 py-0.5 rounded transition font-medium text-zinc-500 hover:text-zinc-300">EN</button>
+        </div>
+
         <div class="hidden md:flex items-center gap-2 text-[11px] font-mono text-zinc-400">
           <i class="fa-solid fa-microchip text-zinc-500"></i>
-          <span>Client-Side Sandbox</span>
+          <span data-i18n="clientSandbox">Client-Side Sandbox</span>
         </div>
         <div class="hidden md:block h-3 w-px bg-zinc-800"></div>
         <a href="https://github.com" target="_blank" class="text-xs text-zinc-400 hover:text-zinc-200 transition flex items-center gap-1.5 font-mono px-2 py-1 rounded bg-zinc-900/60 sm:bg-transparent border sm:border-0 border-zinc-800">
           <i class="fa-brands fa-github"></i>
-          <span class="hidden sm:inline">Source</span>
+          <span class="hidden sm:inline" data-i18n="sourceCode">Source</span>
         </a>
       </div>
     </div>
@@ -139,15 +145,15 @@
         <div class="flex items-center justify-between pb-2 border-b border-zinc-800/60">
           <div class="flex items-center gap-2">
             <i class="fa-solid fa-terminal text-emerald-400 text-xs"></i>
-            <span class="text-xs font-mono font-medium text-zinc-200 uppercase tracking-wider">Target Endpoint</span>
+            <span class="text-xs font-mono font-medium text-zinc-200 uppercase tracking-wider" data-i18n="targetEndpoint">Target Endpoint</span>
           </div>
-          <span class="text-[10px] font-mono text-zinc-500">Zero-Persistence</span>
+          <span class="text-[10px] font-mono text-zinc-500" data-i18n="zeroPersistence">Zero-Persistence</span>
         </div>
 
         <!-- Protocol Segmented Radio Switcher with AUTO Mode -->
         <div class="space-y-1.5">
           <div class="flex items-center justify-between text-xs">
-            <label class="text-zinc-400 font-medium">Protocol Wire Schema</label>
+            <label class="text-zinc-400 font-medium" data-i18n="protocolWireSchema">Protocol Wire Schema</label>
             <span id="detected-proto-badge" class="text-[10px] font-mono text-emerald-400 px-1.5 py-0.2 rounded bg-emerald-950/60 border border-emerald-800/60 flex items-center gap-1">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
               <span>AUTO: STANDBY</span>
@@ -178,8 +184,8 @@
         <!-- Base URL -->
         <div class="space-y-1">
           <div class="flex items-center justify-between text-xs">
-            <label class="text-zinc-400 font-medium">Base URL</label>
-            <span class="text-[10px] font-mono text-zinc-500">Reverse proxy address</span>
+            <label class="text-zinc-400 font-medium" data-i18n="baseUrl">Base URL</label>
+            <span class="text-[10px] font-mono text-zinc-500" data-i18n="baseUrlHint">Reverse proxy address</span>
           </div>
           <input type="text" id="target-base-url" placeholder="https://api.openai.com/v1" 
             class="input-field w-full rounded px-3 py-2 text-xs font-mono text-zinc-200 outline-none">
@@ -188,8 +194,8 @@
         <!-- API Key -->
         <div class="space-y-1">
           <div class="flex items-center justify-between text-xs">
-            <label class="text-zinc-400 font-medium">API Token</label>
-            <span class="text-[10px] font-mono text-emerald-500/80"><i class="fa-solid fa-shield"></i> In-Memory</span>
+            <label class="text-zinc-400 font-medium" data-i18n="apiToken">API Token</label>
+            <span class="text-[10px] font-mono text-emerald-500/80"><i class="fa-solid fa-shield"></i> <span data-i18n="inMemory">In-Memory</span></span>
           </div>
           <div class="relative">
             <input type="password" id="target-api-key" placeholder="sk-..." 
@@ -203,7 +209,7 @@
         <!-- Claimed Model Target with Live Inventory Fetcher -->
         <div class="space-y-1.5">
           <div class="flex items-center justify-between text-xs">
-            <label class="text-zinc-400 font-medium">Claimed Model Profile</label>
+            <label class="text-zinc-400 font-medium" data-i18n="claimedModelProfile">Claimed Model Profile</label>
             <button id="btn-fetch-models" type="button" class="text-[10px] font-mono text-emerald-400 hover:text-emerald-300 hover:underline flex items-center gap-1 transition">
               <svg class="w-3 h-3 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -248,15 +254,15 @@
         <div class="pt-2 border-t border-zinc-800/60">
           <button id="toggle-cors-opts" class="text-[11px] text-zinc-400 hover:text-zinc-200 flex items-center justify-between w-full py-0.5">
             <span class="flex items-center gap-1.5 font-mono">
-              <i class="fa-solid fa-network-wired text-zinc-500"></i> CORS Relay Bypass
+              <i class="fa-solid fa-network-wired text-zinc-500"></i> <span data-i18n="corsRelay">CORS Relay Bypass</span>
             </span>
-            <span id="cors-status-label" class="text-[10px] font-mono text-emerald-400">Direct Browser</span>
+            <span id="cors-status-label" class="text-[10px] font-mono text-emerald-400" data-i18n="corsDirect">Direct Browser</span>
           </button>
           <div id="cors-options-drawer" class="hidden mt-2 p-2.5 bg-zinc-950/80 rounded border border-zinc-800/80 space-y-1.5">
-            <span class="text-[10px] text-zinc-400 block font-mono">Custom Cloudflare Worker Proxy:</span>
+            <span class="text-[10px] text-zinc-400 block font-mono" data-i18n="corsWorkerPrompt">Custom Cloudflare Worker Proxy:</span>
             <input type="text" id="cors-proxy-prefix" placeholder="https://my-worker.workers.dev/?" 
               class="input-field w-full rounded px-2.5 py-1 text-[11px] font-mono text-zinc-300 outline-none">
-            <span class="text-[10px] text-zinc-500 block">Leave blank unless browser console blocks request with CORS error.</span>
+            <span class="text-[10px] text-zinc-500 block" data-i18n="corsHint">Leave blank unless browser console blocks request with CORS error.</span>
           </div>
         </div>
 
@@ -267,14 +273,14 @@
         <div class="flex items-center justify-between pb-2 border-b border-zinc-800/60">
           <div class="flex items-center gap-2">
             <i class="fa-solid fa-dna text-emerald-400 text-xs"></i>
-            <span class="text-xs font-mono font-medium text-zinc-200 uppercase tracking-wider">Fingerprint Vectors</span>
+            <span class="text-xs font-mono font-medium text-zinc-200 uppercase tracking-wider" data-i18n="fingerprintVectors">Fingerprint Vectors</span>
           </div>
           <div class="flex items-center space-x-2 text-[10px] font-mono">
-            <button id="btn-select-all" class="text-zinc-400 hover:text-emerald-400 transition">ALL</button>
+            <button id="btn-select-all" class="text-zinc-400 hover:text-emerald-400 transition" data-i18n="btnAll">ALL</button>
             <span class="text-zinc-700">&bull;</span>
-            <button id="btn-select-quick" class="text-zinc-400 hover:text-cyan-400 transition">FAST</button>
+            <button id="btn-select-quick" class="text-zinc-400 hover:text-cyan-400 transition" data-i18n="btnFast">FAST</button>
             <span class="text-zinc-700">&bull;</span>
-            <button id="btn-select-none" class="text-zinc-500 hover:text-zinc-300 transition">CLEAR</button>
+            <button id="btn-select-none" class="text-zinc-500 hover:text-zinc-300 transition" data-i18n="btnClear">CLEAR</button>
           </div>
         </div>
 
@@ -286,7 +292,7 @@
         <!-- Primary Action Trigger -->
         <button id="btn-start-audit" class="w-full mt-2 py-2.5 px-4 rounded bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-zinc-950 font-semibold font-mono text-xs tracking-wider uppercase transition flex items-center justify-center gap-2 shadow-sm">
           <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-          <span>Launch Forensic Scan</span>
+          <span data-i18n="launchScan">Launch Forensic Scan</span>
         </button>
       </div>
 
@@ -300,20 +306,20 @@
         <div class="flex items-start justify-between gap-3 pb-3 border-b border-zinc-800/60">
           <div class="space-y-1">
             <div class="flex items-center gap-2 flex-wrap">
-              <span id="layman-status-badge" class="font-mono text-xs font-bold px-2.5 py-0.5 rounded uppercase tracking-wider bg-zinc-900 text-zinc-400 border border-zinc-800">
+              <span id="layman-status-badge" class="font-mono text-xs font-bold px-2.5 py-0.5 rounded uppercase tracking-wider bg-zinc-900 text-zinc-400 border border-zinc-800" data-i18n="statusNotScanned">
                 BELUM DI-SCAN
               </span>
-              <span id="verdict-score" class="font-mono text-xs text-zinc-500 font-semibold">0/0 Tes</span>
+              <span id="verdict-score" class="font-mono text-xs text-zinc-500 font-semibold" data-i18n="scorePlaceholder">0/0 Tes</span>
             </div>
-            <h3 id="layman-headline" class="text-sm sm:text-base font-semibold text-zinc-200 leading-snug">
+            <h3 id="layman-headline" class="text-sm sm:text-base font-semibold text-zinc-200 leading-snug" data-i18n="laymanReadyHeadline">
               Siap menguji keaslian API Key
             </h3>
-            <p id="layman-subtext" class="text-xs text-zinc-400 leading-relaxed">
+            <p id="layman-subtext" class="text-xs text-zinc-400 leading-relaxed" data-i18n="laymanReadySubtext">
               Masukkan Base URL & API Key penjual, lalu klik tombol Launch Scan untuk memeriksa apakah model ini asli atau hasil masking/penipuan.
             </p>
           </div>
           <div class="text-right shrink-0">
-            <span id="layman-risk-pill" class="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-900 text-zinc-500 border border-zinc-800 uppercase">
+            <span id="layman-risk-pill" class="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-900 text-zinc-500 border border-zinc-800 uppercase" data-i18n="statusIdle">
               STATUS: IDLE
             </span>
           </div>
@@ -322,7 +328,7 @@
         <!-- Dynamic Human-Readable Evidence Findings -->
         <div id="layman-evidence-container" class="hidden space-y-2 pt-1">
           <span class="text-[11px] font-mono font-medium text-zinc-400 uppercase tracking-wider block">
-            <i class="fa-solid fa-list-check text-emerald-400 mr-1"></i> Rangkuman Temuan Forensik:
+            <i class="fa-solid fa-list-check text-emerald-400 mr-1"></i> <span data-i18n="findingsSummaryTitle">Rangkuman Temuan Forensik:</span>
           </span>
           <div id="layman-evidence-list" class="space-y-1.5 text-xs">
             <!-- Dynamically populated -->
@@ -333,12 +339,12 @@
         <div class="pt-2 flex items-center gap-2 flex-wrap" id="layman-action-bar">
           <button id="btn-copy-complaint" type="button" class="hidden py-2 px-3 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 hover:border-emerald-500/50 text-xs font-mono text-zinc-200 transition flex items-center gap-2 shadow-sm">
             <i class="fa-regular fa-copy text-emerald-400"></i>
-            <span>Salin Bukti Komplain / Refund (WA/Telegram)</span>
+            <span data-i18n="copyComplaintBtn">Salin Bukti Komplain / Refund (WA/Telegram)</span>
           </button>
           
           <button id="btn-toggle-tech-details" type="button" class="py-2 px-3 rounded bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 text-xs font-mono text-zinc-400 hover:text-zinc-200 transition flex items-center gap-1.5 ml-auto">
             <i class="fa-solid fa-code text-[11px] text-zinc-500"></i>
-            <span id="tech-details-btn-label">Tampilkan Detail Teknis (0)</span>
+            <span id="tech-details-btn-label" data-i18n="showTechDetails">Tampilkan Detail Teknis (0)</span>
             <i id="tech-details-chevron" class="fa-solid fa-chevron-down text-[10px] text-zinc-500 ml-1 transition-transform duration-200"></i>
           </button>
         </div>
@@ -350,20 +356,20 @@
         <!-- Diagnostic Metric Grid -->
         <div class="panel rounded-lg p-3 sm:p-4 space-y-2.5">
           <div class="flex items-center justify-between font-mono text-xs text-zinc-400 border-b border-zinc-800/60 pb-2">
-            <span>Hardware Telemetry & Token BPE</span>
+            <span data-i18n="hardwareTelemetry">Hardware Telemetry & Token BPE</span>
             <span id="audit-target-display" class="text-[11px] text-zinc-500 break-all">-</span>
           </div>
           <div class="grid grid-cols-3 gap-2 sm:gap-3 font-mono">
             <div class="bg-zinc-950/70 p-2 sm:p-2.5 rounded border border-zinc-800/60">
-              <span class="text-[9px] sm:text-[10px] uppercase text-zinc-500 block">TTFT Latency</span>
+              <span class="text-[9px] sm:text-[10px] uppercase text-zinc-500 block" data-i18n="ttftLatency">TTFT Latency</span>
               <span id="stat-ttft" class="text-xs sm:text-sm font-semibold text-zinc-300 mt-0.5 block">- ms</span>
             </div>
             <div class="bg-zinc-950/70 p-2 sm:p-2.5 rounded border border-zinc-800/60">
-              <span class="text-[9px] sm:text-[10px] uppercase text-zinc-500 block">Throughput</span>
+              <span class="text-[9px] sm:text-[10px] uppercase text-zinc-500 block" data-i18n="throughput">Throughput</span>
               <span id="stat-tps" class="text-xs sm:text-sm font-semibold text-zinc-300 mt-0.5 block">- TPS</span>
             </div>
             <div class="bg-zinc-950/70 p-2 sm:p-2.5 rounded border border-zinc-800/60">
-              <span class="text-[9px] sm:text-[10px] uppercase text-zinc-500 block">BPE Delta</span>
+              <span class="text-[9px] sm:text-[10px] uppercase text-zinc-500 block" data-i18n="bpeDelta">BPE Delta</span>
               <span id="stat-token-match" class="text-xs sm:text-sm font-semibold text-zinc-300 mt-0.5 block truncate">-</span>
             </div>
           </div>
@@ -372,7 +378,7 @@
         <!-- Execution Pipeline Breakdown -->
         <div class="panel rounded-lg p-3 sm:p-4 space-y-3">
           <div class="flex items-center justify-between pb-2 border-b border-zinc-800/60 font-mono text-xs">
-            <span class="font-medium text-zinc-300 uppercase tracking-wider">Vector Probe Status</span>
+            <span class="font-medium text-zinc-300 uppercase tracking-wider" data-i18n="vectorProbeStatus">Vector Probe Status</span>
             <span id="suite-progress-text" class="text-zinc-500 text-[10px] sm:text-[11px]">0/0 Completed</span>
           </div>
 
@@ -386,12 +392,12 @@
           <div class="flex items-center justify-between pb-1.5 border-b border-zinc-800/60 font-mono text-xs">
             <div class="flex items-center gap-2 text-zinc-400">
               <i class="fa-solid fa-terminal text-[11px] text-emerald-400"></i>
-              <span>Raw Protocol Trace</span>
+              <span data-i18n="rawProtocolTrace">Raw Protocol Trace</span>
             </div>
-            <button id="btn-clear-logs" class="text-[10px] text-zinc-500 hover:text-zinc-300 transition">CLEAR</button>
+            <button id="btn-clear-logs" class="text-[10px] text-zinc-500 hover:text-zinc-300 transition" data-i18n="btnClearLogs">CLEAR</button>
           </div>
           <div id="console-logs" class="custom-scroll h-28 sm:h-36 overflow-y-auto bg-black/60 p-2.5 rounded font-mono text-[10px] sm:text-[11px] text-zinc-400 space-y-1 leading-relaxed break-all">
-            <div class="text-zinc-600">// Ready. Configure target endpoint and trigger audit.</div>
+            <div class="text-zinc-600" data-i18n="consoleStandby">// Ready. Configure target endpoint and trigger audit.</div>
           </div>
         </div>
 
@@ -402,7 +408,7 @@
   </main>
 
   <!-- Clean Minimalist Footer -->
-  <footer class="border-t border-zinc-800/60 py-3 text-center text-[11px] sm:text-xs font-mono text-zinc-500 bg-[#09090c] px-4">
+  <footer class="border-t border-zinc-800/60 py-3 text-center text-[11px] sm:text-xs font-mono text-zinc-500 bg-[#09090c] px-4" data-i18n="footerText">
     Zero telemetry retention &bull; Client-side sandbox &bull; Open-source forensic utility
   </footer>
 

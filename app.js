@@ -137,8 +137,191 @@ const TEST_REGISTRY = [
   }
 ];
 
+// ----------------------------------------------------
+// INTERNATIONALIZATION (i18n: ID / EN)
+// ----------------------------------------------------
+const TRANSLATIONS = {
+  id: {
+    clientSandbox: 'Klien Sandbox Forensik',
+    sourceCode: 'Sumber',
+    targetEndpoint: 'Target Endpoint',
+    zeroPersistence: 'Nol-Persistensi',
+    protocolWireSchema: 'Protokol Wire Schema',
+    baseUrl: 'URL Dasar',
+    baseUrlHint: 'Alamat reverse proxy',
+    apiToken: 'Token API',
+    inMemory: 'In-Memory',
+    claimedModelProfile: 'Profil Model yang Diklaim',
+    corsRelay: 'Bypass Relay CORS',
+    corsDirect: 'Langsung dari Browser',
+    corsWorkerPrompt: 'Proxy Kustom Cloudflare Worker:',
+    corsHint: 'Biarkan kosong kecuali konsol browser memblokir request akibat error CORS.',
+    fingerprintVectors: 'Vektor Sidik Jari',
+    btnAll: 'SEMUA',
+    btnFast: 'CEPAT',
+    btnClear: 'KOSONG',
+    launchScan: 'Mulai Pindai Forensik',
+    statusNotScanned: 'BELUM DI-SCAN',
+    scorePlaceholder: '0/0 Tes',
+    laymanReadyHeadline: 'Siap menguji keaslian API Key',
+    laymanReadySubtext: 'Masukkan Base URL & API Key penjual, lalu klik tombol Mulai Pindai untuk memeriksa apakah model ini asli atau hasil masking/penipuan.',
+    statusIdle: 'STATUS: SIAGA',
+    findingsSummaryTitle: 'Rangkuman Temuan Forensik:',
+    copyComplaintBtn: 'Salin Bukti Komplain / Refund (WA/Telegram)',
+    showTechDetails: 'Tampilkan Detail Teknis',
+    hardwareTelemetry: 'Telemetri Hardware & Token BPE',
+    ttftLatency: 'Latensi TTFT',
+    throughput: 'Throughput',
+    bpeDelta: 'Delta BPE',
+    vectorProbeStatus: 'Status Vektor Probe',
+    rawProtocolTrace: 'Trace Protokol Mentah',
+    btnClearLogs: 'BERSIHKAN',
+    consoleStandby: '// Siap. Konfigurasikan target endpoint lalu luncurkan audit.',
+    footerText: 'Nol retensi telemetri • Klien sandbox aman • Utilitas forensik sumber terbuka',
+    
+    // Test Vectors
+    v1_name: 'Logika Spasial & Batas Karakter',
+    v1_desc: 'Hitung huruf tersamar (strawberry) + jebakan matematika.',
+    v2_name: 'Penggunaan Tokenizer & Presisi BPE',
+    v2_desc: 'Cek diskrepansi prompt token pada payload multi-byte.',
+    v3_name: 'Instruksi Sistem & Kebocoran Identitas',
+    v3_desc: 'Bypass adversarial untuk menguji bobot asli dasar model.',
+    v4_name: 'Telemetri Hardware & Profil TPS',
+    v4_desc: 'Tandai hardware LPU hiper-cepat (>220 TPS proxy Groq/SambaNova).',
+    v5_name: 'Kepatuhan Batasan Negatif',
+    v5_desc: 'Syarat format kaku tanpa basa-basi pembuka obrolan.',
+    v6_name: 'Skema Ketat / Decoding Terbatas',
+    v6_desc: 'Terapkan strict JSON Schema native (gagal di proxy abal-abal).',
+    v7_name: 'Anomali Glitched Token Embedding',
+    v7_desc: 'Tes perilaku tokenizer pada token tak terucapkan (SolidGoldMagikarp).',
+    v8_name: 'Horizon Cutoff Temporal (2024-H2)',
+    v8_desc: 'Validasi peristiwa akhir 2024 (Python 3.13, Nobel Oktober 2024).',
+    v9_name: 'Alur CoT Penalaran & Delimiter',
+    v9_desc: 'Cek token penalaran vs tag <think> (deteksi masking o1 ke DeepSeek-R1).',
+    v10_name: 'Logika Tipe Tingkat Tinggi & Lifetime',
+    v10_desc: 'Borrow checker Rust & lifetime HRTB tingkat tinggi.',
+
+    // Verdicts
+    verdictAuditing: 'SEDANG MEMERIKSA...',
+    verdictAuditingHeadline: 'Memeriksa Sidik Jari Model',
+    verdictAuditingSubtext: 'Mengirim rangkaian tes logika, identitas, tokenizer, dan arsitektur untuk memvalidasi keaslian model...',
+    verdictGenuineBadge: 'TERVERIFIKASI ASLI (GENUINE)',
+    verdictGenuineHeadline: 'Model Sesuai Spesifikasi Resmi',
+    verdictGenuineSubtext: 'Hasil pengujian menunjukkan arsitektur internal, tokenizer BPE, logika spasial, dan basis data pengetahuan konsisten dengan model resmi.',
+    verdictGenuineRisk: 'RISIKO: AMAN',
+    verdictSuspiciousBadge: 'MENCURIGAKAN / DOWNGRADED',
+    verdictSuspiciousHeadline: 'Diduga Menggunakan Model Versi Mini / Murah',
+    verdictSuspiciousSubtext: 'Model merespons request, namun kecepatan eksekusi atau akurasi logika mengindikasikan downgrade ke model lebih murah/kecil.',
+    verdictSuspiciousRisk: 'RISIKO: SEDANG',
+    verdictFakeBadge: 'PALSU / HASIL MASKING (SPOOFED)',
+    verdictFakeHeadline: 'Model Ini BUKAN Model Asli!',
+    verdictFakeSubtext: 'Ditemukan ketidakcocokan identitas dan rekayasa proxy. Penjual membungkus model murah/lain menggunakan label nama ini.',
+    verdictFakeRisk: 'RISIKO: PENIPUAN (FAKED)',
+
+    // Inventory & Catalog
+    catalogAuditBadge: 'AUDIT KATALOG',
+    detectedModelsMsg: (total, flagged) => `Terdeteksi ${total} Model (${flagged} Label Kustom / Non-Standar)`,
+    detectedCleanMsg: (total) => `Terdeteksi ${total} Model Standar (Penamaan Bersih)`,
+    customLabelsDesc: (count) => `Katalog upstream memuat ${count} penamaan model kustom/modifikasi:`,
+    endpointProviderTenant: 'Penyedia Endpoint / Tenant:',
+    customModelString: '+ Model Kustom Manual...',
+    manualBadge: 'MANUAL',
+    toastDraftCopied: 'Draft komplain berhasil disalin ke clipboard!',
+    toastCopyFailed: 'Gagal menyalin draft: '
+  },
+  en: {
+    clientSandbox: 'Client-Side Sandbox',
+    sourceCode: 'Source',
+    targetEndpoint: 'Target Endpoint',
+    zeroPersistence: 'Zero-Persistence',
+    protocolWireSchema: 'Protocol Wire Schema',
+    baseUrl: 'Base URL',
+    baseUrlHint: 'Reverse proxy address',
+    apiToken: 'API Token',
+    inMemory: 'In-Memory',
+    claimedModelProfile: 'Claimed Model Profile',
+    corsRelay: 'CORS Relay Bypass',
+    corsDirect: 'Direct Browser',
+    corsWorkerPrompt: 'Custom Cloudflare Worker Proxy:',
+    corsHint: 'Leave blank unless browser console blocks request with CORS error.',
+    fingerprintVectors: 'Fingerprint Vectors',
+    btnAll: 'ALL',
+    btnFast: 'FAST',
+    btnClear: 'CLEAR',
+    launchScan: 'Launch Forensic Scan',
+    statusNotScanned: 'NOT SCANNED',
+    scorePlaceholder: '0/0 Tests',
+    laymanReadyHeadline: 'Ready to Audit API Authenticity',
+    laymanReadySubtext: 'Enter provider Base URL & API Key, then click Launch Forensic Scan to verify if model is genuine or masked/spoofed.',
+    statusIdle: 'STATUS: IDLE',
+    findingsSummaryTitle: 'Forensic Findings Summary:',
+    copyComplaintBtn: 'Copy Dispute / Refund Evidence Draft',
+    showTechDetails: 'Show Technical Details',
+    hardwareTelemetry: 'Hardware Telemetry & Token BPE',
+    ttftLatency: 'TTFT Latency',
+    throughput: 'Throughput',
+    bpeDelta: 'BPE Delta',
+    vectorProbeStatus: 'Vector Probe Status',
+    rawProtocolTrace: 'Raw Protocol Trace',
+    btnClearLogs: 'CLEAR',
+    consoleStandby: '// Ready. Configure target endpoint and trigger audit.',
+    footerText: 'Zero telemetry retention • Client-side sandbox • Open-source forensic utility',
+    
+    // Test Vectors
+    v1_name: 'Spatial Logic & Character Horizon',
+    v1_desc: 'Obfuscated strawberry letter count + math trap.',
+    v2_name: 'Tokenizer Usage & BPE Precision',
+    v2_desc: 'Prompt token discrepancy check on multi-byte payload.',
+    v3_name: 'System Instruction & Identity Leak',
+    v3_desc: 'Adversarial system prompt bypass to probe base model weights.',
+    v4_name: 'Hardware Telemetry & TPS Profiling',
+    v4_desc: 'Flags hyper-fast LPU hardware (>220 TPS Groq/SambaNova proxy).',
+    v5_name: 'Negative Constraint Compliance',
+    v5_desc: 'Strict format enforcement without conversational fillers.',
+    v6_name: 'Strict Schema / Constrained Decoding',
+    v6_desc: 'Enforces native JSON Schema strict parsing (crashes weak proxy engines).',
+    v7_name: 'Glitched Token Embedding Anomaly',
+    v7_desc: 'Tests unspeakable tokens (SolidGoldMagikarp) tokenizer behavior.',
+    v8_name: 'Temporal Cutoff Horizon (2024-H2)',
+    v8_desc: 'Validates late-2024 events (Python 3.13, Nobel Oct 2024).',
+    v9_name: 'Reasoning CoT & Delimiter Structure',
+    v9_desc: 'Checks reasoning tokens vs <think> tags (flags o1 masked to DeepSeek-R1).',
+    v10_name: 'Type-Level Memory & Lifetime Logic',
+    v10_desc: 'High-order Rust borrow checker & HRTB lifetime edge-case.',
+
+    // Verdicts
+    verdictAuditing: 'AUDITING...',
+    verdictAuditingHeadline: 'Auditing Model Fingerprint',
+    verdictAuditingSubtext: 'Dispatching logic, identity, tokenizer, and architecture probes to validate genuine model weights...',
+    verdictGenuineBadge: 'VERIFIED GENUINE',
+    verdictGenuineHeadline: 'Model Matches Official Vendor Specification',
+    verdictGenuineSubtext: 'Audit proves internal architecture, BPE tokenizer, spatial reasoning, and cutoff horizon match the genuine model.',
+    verdictGenuineRisk: 'RISK: SAFE',
+    verdictSuspiciousBadge: 'SUSPICIOUS / DOWNGRADED',
+    verdictSuspiciousHeadline: 'Suspected Mini or Downgraded Model Substitution',
+    verdictSuspiciousSubtext: 'Model responds, but inference throughput or reasoning accuracy indicates an upstream downgrade to a cheaper model.',
+    verdictSuspiciousRisk: 'RISK: MEDIUM',
+    verdictFakeBadge: 'CONFIRMED SPOOFED / MASKED',
+    verdictFakeHeadline: 'Target is NOT the Claimed Model!',
+    verdictFakeSubtext: 'Severe fingerprint mismatch and proxy manipulation detected. Provider is masking a cheaper model under this name.',
+    verdictFakeRisk: 'RISK: FRAUD / FAKED',
+
+    // Inventory & Catalog
+    catalogAuditBadge: 'CATALOG AUDIT',
+    detectedModelsMsg: (total, flagged) => `Detected ${total} Models (${flagged} Non-Standard / Custom Labels)`,
+    detectedCleanMsg: (total) => `Detected ${total} Standard Models (Clean Naming)`,
+    customLabelsDesc: (count) => `Upstream catalog contains ${count} custom/modified model IDs:`,
+    endpointProviderTenant: 'Endpoint Provider / Tenant:',
+    customModelString: '+ Custom Model String...',
+    manualBadge: 'MANUAL',
+    toastDraftCopied: 'Dispute evidence copied to clipboard!',
+    toastCopyFailed: 'Failed to copy draft: '
+  }
+};
+
 // App State
 const state = {
+  lang: localStorage.getItem('mm_lang') || 'id', // 'id' | 'en'
   protocolMode: localStorage.getItem('mm_proto_mode') || 'auto', // 'auto' | 'openai' | 'anthropic'
   detectedProtocol: 'openai', // 'openai' | 'anthropic'
   baseUrl: localStorage.getItem('mm_base_url') || '',
@@ -151,6 +334,8 @@ const state = {
 
 // DOM References
 const el = {
+  langBtnId: document.getElementById('lang-btn-id'),
+  langBtnEn: document.getElementById('lang-btn-en'),
   protoAuto: document.getElementById('proto-auto'),
   protoOpenai: document.getElementById('proto-openai'),
   protoAnthropic: document.getElementById('proto-anthropic'),
@@ -324,11 +509,21 @@ function updateProtocolBadge(text, isProbing = false) {
   `;
 }
 
+// Helper to get translated vector info
+function getVectorInfo(id) {
+  const lang = state.lang || 'id';
+  const dict = TRANSLATIONS[lang] || TRANSLATIONS.id;
+  const name = dict[`v${id}_name`] || `Vector ${id}`;
+  const desc = dict[`v${id}_desc`] || '';
+  return { name, desc };
+}
+
 // Render Checkboxes with Explicit Crisp SVG Checkmark
 function renderTestCheckboxes() {
   el.testCheckboxesContainer.innerHTML = '';
   TEST_REGISTRY.forEach(t => {
     const isChecked = state.selectedTests.includes(t.id);
+    const info = getVectorInfo(t.id);
     const item = document.createElement('div');
     const checkedCardBorder = isChecked ? 'border-emerald-500/50 bg-emerald-950/20' : 'border-zinc-800/70 bg-zinc-950/40';
     item.className = `group flex items-start gap-3 p-2.5 rounded-lg border ${checkedCardBorder} hover:border-zinc-700 cursor-pointer transition-all duration-150 select-none`;
@@ -352,13 +547,13 @@ function renderTestCheckboxes() {
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
             <span class="${isChecked ? 'text-emerald-400' : 'text-zinc-500'} transition-colors">${t.svg}</span>
-            <span class="text-xs font-mono font-medium ${isChecked ? 'text-zinc-100' : 'text-zinc-300'} transition-colors">${String(t.id).padStart(2, '0')}. ${t.name}</span>
+            <span class="text-xs font-mono font-medium ${isChecked ? 'text-zinc-100' : 'text-zinc-300'} transition-colors">${String(t.id).padStart(2, '0')}. ${info.name}</span>
           </div>
           ${t.quick 
             ? '<span class="text-[9px] px-1.5 py-0.2 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 font-mono">FAST</span>' 
             : '<span class="text-[9px] px-1.5 py-0.2 rounded bg-purple-950/50 text-purple-300 border border-purple-800/40 font-mono">DEEP</span>'}
         </div>
-        <p class="text-[11px] text-zinc-500 font-sans leading-tight pl-5">${t.desc}</p>
+        <p class="text-[11px] text-zinc-500 font-sans leading-tight pl-5">${info.desc}</p>
       </div>
     `;
 
@@ -396,6 +591,7 @@ function renderPipelineRows() {
   el.suiteProgressText.textContent = `0/${activeTests.length} Completed`;
 
   activeTests.forEach(t => {
+    const info = getVectorInfo(t.id);
     const row = document.createElement('div');
     row.id = `test-row-${t.id}`;
     row.className = 'p-2 sm:p-2.5 rounded bg-zinc-950/60 border border-zinc-800/60 flex items-start justify-between gap-2.5 sm:gap-3 transition';
@@ -403,9 +599,9 @@ function renderPipelineRows() {
       <div class="space-y-0.5 min-w-0 flex-1">
         <div class="flex items-center gap-2">
           <span class="test-icon text-xs text-zinc-600 font-mono shrink-0"><i class="fa-regular fa-circle"></i></span>
-          <span class="text-xs font-mono font-medium text-zinc-300 truncate">${String(t.id).padStart(2, '0')}. ${t.name}</span>
+          <span class="text-xs font-mono font-medium text-zinc-300 truncate">${String(t.id).padStart(2, '0')}. ${info.name}</span>
         </div>
-        <p class="text-[11px] text-zinc-500 test-detail font-sans pl-5 break-words">${t.desc}</p>
+        <p class="text-[11px] text-zinc-500 test-detail font-sans pl-5 break-words">${info.desc}</p>
       </div>
       <span class="test-status font-mono text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded bg-zinc-900 text-zinc-500 border border-zinc-800 uppercase tracking-wider shrink-0 mt-0.5">PENDING</span>
     `;
@@ -612,6 +808,50 @@ document.addEventListener('click', (e) => {
   }
 });
 
+// Apply active language to static data-i18n elements
+function setLanguage(lang) {
+  state.lang = lang === 'en' ? 'en' : 'id';
+  localStorage.setItem('mm_lang', state.lang);
+
+  const dict = TRANSLATIONS[state.lang] || TRANSLATIONS.id;
+
+  // Toggle button active classes
+  if (el.langBtnId && el.langBtnEn) {
+    if (state.lang === 'id') {
+      el.langBtnId.className = 'px-2 py-0.5 rounded transition font-bold bg-zinc-850 text-emerald-400';
+      el.langBtnEn.className = 'px-2 py-0.5 rounded transition font-medium text-zinc-500 hover:text-zinc-300';
+    } else {
+      el.langBtnEn.className = 'px-2 py-0.5 rounded transition font-bold bg-zinc-850 text-emerald-400';
+      el.langBtnId.className = 'px-2 py-0.5 rounded transition font-medium text-zinc-500 hover:text-zinc-300';
+    }
+  }
+
+  // Update all data-i18n static elements
+  document.querySelectorAll('[data-i18n]').forEach(elNode => {
+    const key = elNode.getAttribute('data-i18n');
+    if (dict[key]) {
+      elNode.textContent = dict[key];
+    }
+  });
+
+  // Update search input placeholder
+  if (el.modelSearchInput) {
+    el.modelSearchInput.placeholder = state.lang === 'id' 
+      ? 'Cari nama model atau vendor...' 
+      : 'Search model name or vendor...';
+  }
+
+  // Re-render dynamic list views
+  renderTestCheckboxes();
+  renderPipelineRows();
+  renderModelOptions(el.modelSearchInput?.value || '');
+
+  // If audit was previously executed, refresh layman summary in the new language
+  if (auditState.lastVerdict) {
+    renderLaymanSummary(auditState.lastVerdict.scorePercentage, []);
+  }
+}
+
 // Init UI
 function initUI() {
   if (state.baseUrl) el.baseUrl.value = state.baseUrl;
@@ -639,9 +879,18 @@ function initUI() {
     });
   }
 
+  // Language switch listeners
+  if (el.langBtnId) {
+    el.langBtnId.addEventListener('click', () => setLanguage('id'));
+  }
+  if (el.langBtnEn) {
+    el.langBtnEn.addEventListener('click', () => setLanguage('en'));
+  }
+
+  // Set initial language
+  setLanguage(state.lang);
+
   updateProtocolUI();
-  renderTestCheckboxes();
-  renderPipelineRows();
 }
 
 function updateProtocolUI() {
@@ -868,7 +1117,8 @@ async function fetchAvailableModels() {
           ${f.id}
         </span>
       `).join('');
-      const ownerAlert = customOwners.size > 0 ? `<div class="text-[10px] text-zinc-400">Endpoint Provider / Tenant: <span class="text-zinc-200 font-semibold">${Array.from(customOwners).join(', ')}</span></div>` : '';
+      const dict = TRANSLATIONS[state.lang] || TRANSLATIONS.id;
+      const ownerAlert = customOwners.size > 0 ? `<div class="text-[10px] text-zinc-400">${dict.endpointProviderTenant} <span class="text-zinc-200 font-semibold">${Array.from(customOwners).join(', ')}</span></div>` : '';
       
       el.inventorySanityBanner.innerHTML = `
         <div class="flex items-center justify-between">
@@ -876,12 +1126,12 @@ async function fetchAvailableModels() {
             <svg class="w-3.5 h-3.5 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span>Detected ${models.length} Models (${flagged.length} Non-Standard / Custom Labels)</span>
+            <span>${dict.detectedModelsMsg(models.length, flagged.length)}</span>
           </div>
-          <span class="text-[9px] px-1.5 py-0.2 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 font-mono">CATALOG AUDIT</span>
+          <span class="text-[9px] px-1.5 py-0.2 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 font-mono">${dict.catalogAuditBadge}</span>
         </div>
         <div class="text-[10px] text-zinc-400">
-          Katalog upstream memuat ${flagged.length} penamaan model kustom/modifikasi:
+          ${dict.customLabelsDesc(flagged.length)}
         </div>
         <div class="flex flex-wrap gap-1 max-h-28 overflow-y-auto custom-scroll p-1.5 bg-zinc-950/80 rounded border border-zinc-800/80">
           ${flaggedList}
@@ -891,11 +1141,12 @@ async function fetchAvailableModels() {
       appendLog(`[Inventory Audit] Retrieved ${models.length} models (${flagged.length} non-standard/custom labels identified).`, 'info');
       showToast(`Loaded ${models.length} models (${flagged.length} custom labels detected).`, 'info');
     } else {
+      const dict = TRANSLATIONS[state.lang] || TRANSLATIONS.id;
       el.inventorySanityBanner.className = 'mt-2 p-2 rounded border border-emerald-800/60 bg-emerald-950/30 text-[11px] font-mono text-emerald-300';
       el.inventorySanityBanner.innerHTML = `
         <div class="flex items-center gap-1.5 font-semibold text-emerald-400">
           <svg class="w-3.5 h-3.5 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-          <span>Detected ${models.length} Standard Models (Clean Naming)</span>
+          <span>${dict.detectedCleanMsg(models.length)}</span>
         </div>
       `;
       showToast(`Loaded ${models.length} available models from upstream catalog.`, 'success');
@@ -1185,37 +1436,51 @@ function renderLaymanSummary(scorePercentage, results) {
     baseUrl: state.baseUrl
   };
 
+  const isEn = state.lang === 'en';
+
   // Render UI Components
   if (verdictLevel === 'genuine') {
     el.laymanSummaryCard.className = 'panel rounded-lg p-4 space-y-3.5 border-l-4 border-l-emerald-500 transition-all duration-300 bg-emerald-950/10';
     el.laymanStatusBadge.className = 'font-mono text-xs font-bold px-2.5 py-0.5 rounded uppercase tracking-wider bg-emerald-950 text-emerald-300 border border-emerald-800';
-    el.laymanStatusBadge.textContent = 'TERVERIFIKASI ASLI (GENUINE)';
-    el.laymanHeadline.textContent = `Model Sesuai Spesifikasi Resmi ${familyInfo.family}`;
+    el.laymanStatusBadge.textContent = isEn ? 'VERIFIED GENUINE' : 'TERVERIFIKASI ASLI (GENUINE)';
+    el.laymanHeadline.textContent = isEn 
+      ? `Model Matches Official ${familyInfo.family} Specification` 
+      : `Model Sesuai Spesifikasi Resmi ${familyInfo.family}`;
     el.laymanHeadline.className = 'text-sm sm:text-base font-semibold text-emerald-300 leading-snug';
-    el.laymanSubtext.textContent = `Hasil pengujian menunjukkan arsitektur internal, tokenizer BPE, logika spasial, dan basis data pengetahuan konsisten dengan model resmi ${familyInfo.flagName}.`;
+    el.laymanSubtext.textContent = isEn 
+      ? `Audit confirms internal architecture, BPE tokenizer, spatial reasoning, and knowledge horizon match official ${familyInfo.flagName} model.` 
+      : `Hasil pengujian menunjukkan arsitektur internal, tokenizer BPE, logika spasial, dan basis data pengetahuan konsisten dengan model resmi ${familyInfo.flagName}.`;
     el.laymanRiskPill.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-300 border border-emerald-700 uppercase font-semibold';
-    el.laymanRiskPill.textContent = 'RISIKO: AMAN';
+    el.laymanRiskPill.textContent = isEn ? 'RISK: SAFE' : 'RISIKO: AMAN';
     el.btnCopyComplaint.classList.add('hidden');
   } else if (verdictLevel === 'suspicious') {
     el.laymanSummaryCard.className = 'panel rounded-lg p-4 space-y-3.5 border-l-4 border-l-amber-500 transition-all duration-300 bg-amber-950/10';
     el.laymanStatusBadge.className = 'font-mono text-xs font-bold px-2.5 py-0.5 rounded uppercase tracking-wider bg-amber-950 text-amber-300 border border-amber-800';
-    el.laymanStatusBadge.textContent = 'MENCURIGAKAN / DOWNGRADED';
-    el.laymanHeadline.textContent = `Diduga Menggunakan Model Versi Mini / Murah`;
+    el.laymanStatusBadge.textContent = isEn ? 'SUSPICIOUS / DOWNGRADED' : 'MENCURIGAKAN / DOWNGRADED';
+    el.laymanHeadline.textContent = isEn 
+      ? `Suspected Mini or Cheaper Model Substitution` 
+      : `Diduga Menggunakan Model Versi Mini / Murah`;
     el.laymanHeadline.className = 'text-sm sm:text-base font-semibold text-amber-300 leading-snug';
-    el.laymanSubtext.textContent = `Model merespons request, namun kecepatan eksekusi atau akurasi logika mengindikasikan downgrade ke model lebih murah/kecil.`;
+    el.laymanSubtext.textContent = isEn 
+      ? `Model responds, but inference throughput or reasoning discrepancies indicate an upstream downgrade to a smaller/cheaper model.` 
+      : `Model merespons request, namun kecepatan eksekusi atau akurasi logika mengindikasikan downgrade ke model lebih murah/kecil.`;
     el.laymanRiskPill.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-amber-900/60 text-amber-300 border border-amber-700 uppercase font-semibold';
-    el.laymanRiskPill.textContent = 'RISIKO: SEDANG';
+    el.laymanRiskPill.textContent = isEn ? 'RISK: MEDIUM' : 'RISIKO: SEDANG';
     el.btnCopyComplaint.classList.remove('hidden');
   } else {
     // FAKE / MASKED
     el.laymanSummaryCard.className = 'panel rounded-lg p-4 space-y-3.5 border-l-4 border-l-rose-500 transition-all duration-300 bg-rose-950/15';
     el.laymanStatusBadge.className = 'font-mono text-xs font-bold px-2.5 py-0.5 rounded uppercase tracking-wider bg-rose-950 text-rose-300 border border-rose-800';
-    el.laymanStatusBadge.textContent = 'PALSU / HASIL MASKING (SPOOFED)';
-    el.laymanHeadline.textContent = `Model Ini BUKAN ${familyInfo.flagName} Asli!`;
+    el.laymanStatusBadge.textContent = isEn ? 'CONFIRMED SPOOFED / MASKED' : 'PALSU / HASIL MASKING (SPOOFED)';
+    el.laymanHeadline.textContent = isEn 
+      ? `Target is NOT Genuine ${familyInfo.flagName}!` 
+      : `Model Ini BUKAN ${familyInfo.flagName} Asli!`;
     el.laymanHeadline.className = 'text-sm sm:text-base font-semibold text-rose-300 leading-snug';
-    el.laymanSubtext.textContent = `Ditemukan ketidakcocokan identitas dan rekayasa proxy. Penjual membungkus model murah/lain menggunakan label nama ${state.claimedModel}.`;
+    el.laymanSubtext.textContent = isEn 
+      ? `Severe identity mismatches and reverse proxy masking detected. Upstream provider wraps a cheaper model under the label ${state.claimedModel}.` 
+      : `Ditemukan ketidakcocokan identitas dan rekayasa proxy. Penjual membungkus model murah/lain menggunakan label nama ${state.claimedModel}.`;
     el.laymanRiskPill.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-rose-900/70 text-rose-200 border border-rose-700 uppercase font-semibold';
-    el.laymanRiskPill.textContent = 'RISIKO: PENIPUAN (FAKED)';
+    el.laymanRiskPill.textContent = isEn ? 'RISK: FRAUD / FAKED' : 'RISIKO: PENIPUAN (FAKED)';
     el.btnCopyComplaint.classList.remove('hidden');
   }
 
@@ -1247,23 +1512,46 @@ function renderLaymanSummary(scorePercentage, results) {
   }
 
   // Update Technical Drawer Toggle Label
-  el.techDetailsBtnLabel.textContent = `Tampilkan Detail Teknis (${results.length})`;
+  const count = results ? results.length : TEST_REGISTRY.length;
+  el.techDetailsBtnLabel.textContent = isEn 
+    ? `Show Technical Details (${count})` 
+    : `Tampilkan Detail Teknis (${count})`;
 }
 
-// 1-Click Copy Complaint / Refund Draft for Layman
+// 1-Click Copy Complaint / Refund Draft for Layman (Localized)
 function copyComplaintDraft() {
   if (!auditState.lastVerdict) return;
   const v = auditState.lastVerdict;
-  const timestamp = new Date().toLocaleString('id-ID');
+  const isEn = state.lang === 'en';
+  const timestamp = new Date().toLocaleString(isEn ? 'en-US' : 'id-ID');
   
   let evidenceBullets = '';
   if (v.findings.length > 0) {
     evidenceBullets = v.findings.map((f, i) => `${i + 1}. [${f.headline}]\n   Detail: ${f.desc}`).join('\n\n');
   } else {
-    evidenceBullets = `- Skor kecocokan arsitektur hanya ${v.scorePercentage}% (Gagal uji integritas model).`;
+    evidenceBullets = isEn 
+      ? `- Architecture similarity score is only ${v.scorePercentage}% (Failed integrity benchmark).`
+      : `- Skor kecocokan arsitektur hanya ${v.scorePercentage}% (Gagal uji integritas model).`;
   }
 
-  const complaintText = `Halo admin, mohon maaf mau komplain perihal API Key yang saya beli.
+  let complaintText = '';
+
+  if (isEn) {
+    complaintText = `Hi admin, I would like to dispute the API key purchased.
+
+After conducting a technical forensic audit via AI Model Mask Checker on:
+- Audit Timestamp: ${timestamp}
+- Base URL: ${v.baseUrl || 'Provider Endpoint'}
+- Target Model: ${v.claimedModel}
+- Forensic Verdict: ${v.verdictLevel.toUpperCase()} (Authenticity Score: ${v.scorePercentage}%)
+
+Technical Forensic Evidence indicating model spoofing/downgrading:
+
+${evidenceBullets}
+
+Based on the evidence above, the endpoint does NOT provide original ${v.familyInfo.family} weights. Please provide a valid original endpoint or process a refund. Thank you!`;
+  } else {
+    complaintText = `Halo admin, mohon maaf mau komplain perihal API Key yang saya beli.
 
 Setelah saya lakukan audit forensik teknis menggunakan AI Model Mask Checker pada:
 - Waktu Audit: ${timestamp}
@@ -1276,11 +1564,12 @@ Berikut bukti temuan forensik bahwa model ini di-masking / tidak sesuai dengan m
 ${evidenceBullets}
 
 Berdasarkan bukti di atas, model yang disediakan di proxy ini bukan ${v.familyInfo.family} original. Mohon untuk diganti dengan endpoint resmi yang valid atau proses refund dana saya ya. Terima kasih!`;
+  }
 
   navigator.clipboard.writeText(complaintText).then(() => {
-    showToast('Draft komplain berhasil disalin ke clipboard!', 'success');
+    showToast(isEn ? 'Dispute evidence copied to clipboard!' : 'Draft komplain berhasil disalin ke clipboard!', 'success');
   }).catch(err => {
-    showToast('Gagal menyalin draft: ' + err.message, 'error');
+    showToast((isEn ? 'Failed to copy draft: ' : 'Gagal menyalin draft: ') + err.message, 'error');
   });
 }
 
