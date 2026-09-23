@@ -780,29 +780,36 @@ async function fetchAvailableModels() {
     }
     renderModelOptions('');
 
-    // Display Inventory Sanity Banner
+    // Display Inventory Sanity Banner (Neutral, Professional Diagnostic Tone)
     el.inventorySanityBanner.classList.remove('hidden');
     if (flagged.length > 0) {
-      el.inventorySanityBanner.className = 'mt-2 p-2.5 rounded border border-rose-800/70 bg-rose-950/40 text-[11px] font-mono text-rose-300 space-y-1';
-      const flaggedList = flagged.map(f => `<span class="bg-rose-900/60 px-1 py-0.5 rounded text-rose-200">${f.id}</span>`).join(' ');
-      const ownerAlert = customOwners.size > 0 ? `<div class="text-[10px] text-rose-400">Reseller Tenant: ${Array.from(customOwners).join(', ')}</div>` : '';
+      el.inventorySanityBanner.className = 'mt-2 p-2.5 rounded border border-zinc-800 bg-zinc-950/70 text-[11px] font-mono text-zinc-300 space-y-1.5';
+      const flaggedList = flagged.map(f => `<span class="bg-zinc-850 border border-zinc-700/60 px-1.5 py-0.5 rounded text-amber-300">${f.id}</span>`).join(' ');
+      const ownerAlert = customOwners.size > 0 ? `<div class="text-[10px] text-zinc-400">Endpoint Provider / Tenant: <span class="text-zinc-200 font-semibold">${Array.from(customOwners).join(', ')}</span></div>` : '';
       
       el.inventorySanityBanner.innerHTML = `
-        <div class="flex items-center gap-1.5 font-bold text-rose-400">
-          <i class="fa-solid fa-triangle-exclamation"></i>
-          <span>SUSPICIOUS INVENTORY DETECTED (${flagged.length} Fake Models)</span>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-1.5 text-zinc-200 font-semibold">
+            <svg class="w-3.5 h-3.5 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Detected ${models.length} Models (${flagged.length} Non-Standard / Custom Labels)</span>
+          </div>
+          <span class="text-[9px] px-1.5 py-0.2 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 font-mono">CATALOG AUDIT</span>
         </div>
-        <div class="text-[10px] leading-relaxed">Upstream catalog contains fabricated model IDs: ${flaggedList}</div>
+        <div class="text-[10px] text-zinc-400 leading-relaxed">
+          Katalog upstream memuat ${flagged.length} penamaan model kustom/modifikasi: ${flaggedList}
+        </div>
         ${ownerAlert}
       `;
-      appendLog(`[Inventory Audit] ⚠️ Flagged ${flagged.length} non-existent model IDs in seller catalog!`, 'error');
-      showToast(`Flagged ${flagged.length} fake model names in seller inventory!`, 'warn');
+      appendLog(`[Inventory Audit] Retrieved ${models.length} models (${flagged.length} non-standard/custom labels identified).`, 'info');
+      showToast(`Loaded ${models.length} models (${flagged.length} custom labels detected).`, 'info');
     } else {
       el.inventorySanityBanner.className = 'mt-2 p-2 rounded border border-emerald-800/60 bg-emerald-950/30 text-[11px] font-mono text-emerald-300';
       el.inventorySanityBanner.innerHTML = `
         <div class="flex items-center gap-1.5 font-semibold text-emerald-400">
-          <i class="fa-solid fa-circle-check"></i>
-          <span>${models.length} standard models retrieved. No fakes detected in naming.</span>
+          <svg class="w-3.5 h-3.5 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+          <span>Detected ${models.length} Standard Models (Clean Naming)</span>
         </div>
       `;
       showToast(`Loaded ${models.length} available models from upstream catalog.`, 'success');
