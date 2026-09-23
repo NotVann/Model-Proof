@@ -783,8 +783,12 @@ async function fetchAvailableModels() {
     // Display Inventory Sanity Banner (Neutral, Professional Diagnostic Tone)
     el.inventorySanityBanner.classList.remove('hidden');
     if (flagged.length > 0) {
-      el.inventorySanityBanner.className = 'mt-2 p-2.5 rounded border border-zinc-800 bg-zinc-950/70 text-[11px] font-mono text-zinc-300 space-y-1.5';
-      const flaggedList = flagged.map(f => `<span class="bg-zinc-850 border border-zinc-700/60 px-1.5 py-0.5 rounded text-amber-300">${f.id}</span>`).join(' ');
+      el.inventorySanityBanner.className = 'mt-2 p-2.5 rounded border border-zinc-800 bg-zinc-950/70 text-[11px] font-mono text-zinc-300 space-y-2';
+      const flaggedList = flagged.map(f => `
+        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-zinc-900 border border-zinc-700/60 text-amber-300 hover:border-amber-500/50 hover:bg-zinc-850 transition select-all break-all" title="${f.id} (${f.reason})">
+          ${f.id}
+        </span>
+      `).join('');
       const ownerAlert = customOwners.size > 0 ? `<div class="text-[10px] text-zinc-400">Endpoint Provider / Tenant: <span class="text-zinc-200 font-semibold">${Array.from(customOwners).join(', ')}</span></div>` : '';
       
       el.inventorySanityBanner.innerHTML = `
@@ -797,8 +801,11 @@ async function fetchAvailableModels() {
           </div>
           <span class="text-[9px] px-1.5 py-0.2 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 font-mono">CATALOG AUDIT</span>
         </div>
-        <div class="text-[10px] text-zinc-400 leading-relaxed">
-          Katalog upstream memuat ${flagged.length} penamaan model kustom/modifikasi: ${flaggedList}
+        <div class="text-[10px] text-zinc-400">
+          Katalog upstream memuat ${flagged.length} penamaan model kustom/modifikasi:
+        </div>
+        <div class="flex flex-wrap gap-1 max-h-28 overflow-y-auto custom-scroll p-1.5 bg-zinc-950/80 rounded border border-zinc-800/80">
+          ${flaggedList}
         </div>
         ${ownerAlert}
       `;
