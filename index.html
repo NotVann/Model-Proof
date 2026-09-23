@@ -278,11 +278,24 @@
             </span>
             <span id="cors-status-label" class="text-[10px] font-mono text-emerald-400" data-i18n="corsDirect">Direct Browser</span>
           </button>
-          <div id="cors-options-drawer" class="hidden mt-2 p-2.5 bg-zinc-950/80 rounded border border-zinc-800/80 space-y-1.5">
-            <span class="text-[10px] text-zinc-400 block font-mono" data-i18n="corsWorkerPrompt">Custom Cloudflare Worker Proxy:</span>
-            <input type="text" id="cors-proxy-prefix" placeholder="https://my-worker.workers.dev/?" 
-              class="input-field w-full rounded px-2.5 py-1 text-[11px] font-mono text-zinc-300 outline-none">
-            <span class="text-[10px] text-zinc-500 block" data-i18n="corsHint">Leave blank unless browser console blocks request with CORS error.</span>
+          <div id="cors-options-drawer" class="hidden mt-2 p-2.5 bg-zinc-950/80 rounded border border-zinc-800/80 space-y-2.5">
+            <div class="space-y-1">
+              <span class="text-[10px] text-zinc-400 block font-mono" data-i18n="corsWorkerPrompt">Custom Cloudflare Worker Proxy:</span>
+              <input type="text" id="cors-proxy-prefix" placeholder="https://my-worker.workers.dev/?" 
+                class="input-field w-full rounded px-2.5 py-1 text-[11px] font-mono text-zinc-300 outline-none">
+              <span class="text-[10px] text-zinc-500 block" data-i18n="corsHint">Leave blank unless browser console blocks request with CORS error.</span>
+            </div>
+            <div class="space-y-1 pt-1.5 border-t border-zinc-800/60">
+              <div class="flex items-center justify-between text-[11px] font-mono">
+                <span class="text-zinc-400" data-i18n="timeoutLabel">Request Timeout:</span>
+                <span id="timeout-display" class="text-emerald-400 font-semibold">60s</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <input type="range" id="timeout-slider" min="15" max="180" step="5" value="60" 
+                  class="w-full accent-emerald-500 bg-zinc-800 h-1.5 rounded cursor-pointer">
+              </div>
+              <span class="text-[10px] text-zinc-500 block" data-i18n="timeoutHint">Increase if upstream proxy queue or reasoning model is slow.</span>
+            </div>
           </div>
         </div>
 
@@ -514,6 +527,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=1.0.4"></script>
+  <script src="app.js?v=1.0.5"></script>
 </body>
 </html>

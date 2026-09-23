@@ -302,7 +302,11 @@ const TRANSLATIONS = {
     confirmEstTokens: 'Estimasi Token:',
     confirmQuotaNotice: 'Pastikan API key memiliki kuota aktif. Pengujian ini tidak menyimpan token API di server mana pun.',
     confirmBtnCancel: 'Batal',
-    confirmBtnProceed: 'Lanjutkan Scan'
+    confirmBtnProceed: 'Lanjutkan Scan',
+
+    // Network & Timeout
+    timeoutLabel: 'Batas Waktu (Timeout):',
+    timeoutHint: 'Naikkan jika proxy reseller antre atau model penalaran (reasoning) lambat.'
   },
   en: {
     clientSandbox: 'Client-Side Sandbox',
@@ -417,7 +421,11 @@ const TRANSLATIONS = {
     confirmEstTokens: 'Estimated Tokens:',
     confirmQuotaNotice: 'Ensure your API key has active quota. This tool operates client-side and never retains tokens.',
     confirmBtnCancel: 'Cancel',
-    confirmBtnProceed: 'Proceed with Scan'
+    confirmBtnProceed: 'Proceed with Scan',
+
+    // Network & Timeout
+    timeoutLabel: 'Request Timeout:',
+    timeoutHint: 'Increase if upstream proxy queue or reasoning model is slow.'
   }
 };
 
@@ -430,6 +438,7 @@ const state = {
   apiKey: localStorage.getItem('mm_api_key') || '',
   claimedModel: localStorage.getItem('mm_claimed_model') || 'claude-3-5-sonnet-20241022',
   corsProxy: localStorage.getItem('mm_cors_proxy') || '',
+  requestTimeout: parseInt(localStorage.getItem('mm_request_timeout'), 10) || 60,
   selectedTests: JSON.parse(localStorage.getItem('mm_selected_tests') || '[1,2,3,4,5,6,7,8]'),
   isRunning: false
 };
@@ -459,6 +468,8 @@ const el = {
   corsDrawer: document.getElementById('cors-options-drawer'),
   corsProxyPrefix: document.getElementById('cors-proxy-prefix'),
   corsStatusLabel: document.getElementById('cors-status-label'),
+  timeoutSlider: document.getElementById('timeout-slider'),
+  timeoutDisplay: document.getElementById('timeout-display'),
   testCheckboxesContainer: document.getElementById('test-checkboxes-container'),
   testPipelineContainer: document.getElementById('test-pipeline-container'),
   btnSelectAll: document.getElementById('btn-select-all'),
@@ -1350,6 +1361,16 @@ el.corsProxyPrefix.addEventListener('input', (e) => {
   el.corsStatusLabel.className = state.corsProxy ? 'text-[10px] text-cyan-400' : 'text-[10px] text-emerald-400';
 });
 
+if (el.timeoutSlider) {
+  el.timeoutSlider.value = state.requestTimeout || 60;
+  if (el.timeoutDisplay) el.timeoutDisplay.textContent = `${state.requestTimeout || 60}s`;
+  el.timeoutSlider.addEventListener('input', (e) => {
+    state.requestTimeout = parseInt(e.target.value, 10) || 60;
+    localStorage.setItem('mm_request_timeout', state.requestTimeout);
+    if (el.timeoutDisplay) el.timeoutDisplay.textContent = `${state.requestTimeout}s`;
+  });
+}
+
 el.btnClearLogs.addEventListener('click', () => el.consoleLogs.innerHTML = '');
 
 // Checkbox Preset Buttons
@@ -1427,8 +1448,9 @@ async function callModel({ messages, stream = false, maxTokens = 500, temperatur
 
   if (state.corsProxy) endpoint = state.corsProxy + endpoint;
 
+  const timeoutMs = (state.requestTimeout || 60) * 1000;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout for heavy slow models
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   const startTime = performance.now();
   let res;
@@ -1443,7 +1465,7 @@ async function callModel({ messages, stream = false, maxTokens = 500, temperatur
       });
     } catch (fetchErr) {
       if (controller.signal.aborted) {
-        throw new Error('Request timeout after 15s');
+        throw new Error(`Request timeout after ${state.requestTimeout || 60}s (upstream proxy or model did not respond in time)`);
       }
       // Automatic fallback to local server proxy if on localhost
       if ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && !state.corsProxy) {

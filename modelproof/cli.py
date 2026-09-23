@@ -95,7 +95,7 @@ def check_fake_pattern(model_id: str):
 
 
 class ApiClient:
-    def __init__(self, base_url: str, api_key: str, protocol: str = "auto", timeout: int = 30):
+    def __init__(self, base_url: str, api_key: str, protocol: str = "auto", timeout: int = 60):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.protocol = protocol
@@ -742,7 +742,7 @@ Examples:
     parser.add_argument("--lang", default="en", choices=["en", "id"], help="Output language (default: en)")
     parser.add_argument("--json", action="store_true", help="Output pure JSON report for CI/CD pipelines")
     parser.add_argument("-V", "--verbose", action="store_true", help="Print raw model responses under each vector")
-    parser.add_argument("--timeout", type=int, default=30, help="Per-request timeout in seconds (default: 30)")
+    parser.add_argument("--timeout", type=int, default=60, help="Per-request timeout in seconds (default: 60)")
     parser.add_argument("-v", "--version", action="version", version="1.0.1")
 
     args = parser.parse_args()

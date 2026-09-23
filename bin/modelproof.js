@@ -70,7 +70,7 @@ function parseArgs() {
     lang: 'en',
     json: false,
     verbose: false,
-    timeout: 30
+    timeout: 60
   };
 
   for (let i = 0; i < args.length; i++) {
