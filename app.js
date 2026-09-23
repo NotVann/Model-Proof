@@ -218,14 +218,25 @@ async function detectProtocol() {
     if (state.corsProxy) probeUrl = state.corsProxy + probeUrl;
 
     try {
-      const probeRes = await fetch(probeUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${state.apiKey}`
-        },
-        body: JSON.stringify({ model: state.claimedModel, messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 })
-      });
+      let probeRes;
+      try {
+        probeRes = await fetch(probeUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.apiKey}` },
+          body: JSON.stringify({ model: state.claimedModel, messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 })
+        });
+      } catch (err) {
+        if ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && !state.corsProxy) {
+          appendLog('[CORS Auto-Bypass] Target blocks browser. Using local proxy relay...', 'warn');
+          probeRes = await fetch(`/api/proxy?url=${encodeURIComponent(probeUrl)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.apiKey}` },
+            body: JSON.stringify({ model: state.claimedModel, messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 })
+          });
+        } else {
+          throw err;
+        }
+      }
 
       // If status is 200, 400 (Bad request with json body), 401 (Auth error), 422 (Unprocessable) -> It's an OpenAI endpoint
       if (probeRes.status === 200 || probeRes.status === 400 || probeRes.status === 401 || probeRes.status === 422) {
@@ -600,11 +611,28 @@ async function callModel({ messages, stream = false, maxTokens = 500, temperatur
   if (state.corsProxy) endpoint = state.corsProxy + endpoint;
 
   const startTime = performance.now();
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: headers,
-    body: JSON.stringify(body)
-  });
+  let res;
+
+  try {
+    res = await fetch(endpoint, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(body)
+    });
+  } catch (fetchErr) {
+    // Automatic fallback to local server proxy if on localhost
+    if ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && !state.corsProxy) {
+      appendLog('[CORS Auto-Bypass] Direct browser call blocked by target nginx. Routing via local relay...', 'warn');
+      const relayEndpoint = `/api/proxy?url=${encodeURIComponent(endpoint)}`;
+      res = await fetch(relayEndpoint, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(body)
+      });
+    } else {
+      throw new Error(`CORS Blocked: Target server nginx has no Access-Control-Allow-Origin header. Use CORS Relay!`);
+    }
+  }
 
   if (!res.ok) {
     const errorText = await res.text();
