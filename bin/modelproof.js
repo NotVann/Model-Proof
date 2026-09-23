@@ -496,16 +496,28 @@ async function runVector10(opts) {
 async function main() {
   const opts = parseArgs();
 
+  const hasUserArgs = process.argv.length > 2;
+
+  // Friendly fallback if user runs without args and no API key is set
   if (!opts.apiKey) {
-    console.error(`${c.red}Error: Missing API token. Provide -k <token> or set OPENAI_API_KEY environment variable.${c.reset}`);
-    process.exit(2);
+    console.log(`\n${c.bold}================================================================================${c.reset}`);
+    console.log(` ${c.bold}${c.cyan}MODELPROOF CLI${c.reset} // LLM Proxy & Masking Forensic Scanner (v1.0.0)`);
+    console.log(`${c.bold}================================================================================${c.reset}`);
+    console.log(`Zero-persistence scanner to detect model spoofing, masking, and proxy downgrades.\n`);
+    console.log(`${c.bold}QUICKSTART:${c.reset}`);
+    console.log(`  npx modelproof -u "https://my-proxy.com/v1" -k "sk-..." -m "gpt-4o"`);
+    console.log(`  npx modelproof -u "https://my-proxy.com/v1" -k "sk-..." --models-only`);
+    console.log(`  npx modelproof -u "https://my-proxy.com/v1" -k "sk-..." --all --json\n`);
+    console.log(`${c.dim}Or set the environment variable: export OPENAI_API_KEY="sk-..."${c.reset}`);
+    console.log(`${c.dim}Run with --help to see all options.${c.reset}\n`);
+    process.exit(0);
   }
 
   const isEn = opts.lang !== 'id';
 
   if (!opts.json) {
     console.log(`\n${c.bold}================================================================================${c.reset}`);
-    console.log(` ${c.bold}${c.cyan}MODELPROOF CLI${c.reset} // LLM Proxy & Masking Forensic Scanner (v2.4.0)`);
+    console.log(` ${c.bold}${c.cyan}MODELPROOF CLI${c.reset} // LLM Proxy & Masking Forensic Scanner (v1.0.0)`);
     console.log(` Target: ${c.bold}${opts.model}${c.reset} @ ${opts.baseUrl}`);
     console.log(`${c.bold}================================================================================${c.reset}`);
   }
@@ -517,7 +529,7 @@ async function main() {
   }
 
   // Preflight 2: Catalog Audit
-  let catalogResult = { count: 0, flagged: [], tenant: null };
+  let catalogResult = { count: 0, models: [], flagged: [], tenant: null };
   try {
     const cleanBase = opts.baseUrl.replace(/\/+$/, '');
     const res = await fetch(`${cleanBase}/models`, {
@@ -525,29 +537,33 @@ async function main() {
     });
     if (res.ok) {
       const data = await res.json();
-      const models = data.data || [];
+      const rawModels = data.data || [];
       const flagged = [];
       const tenants = new Set();
       const FAKE_REGEX = /claude.*(4-5|4\.5|5|opus-5|sonnet-4-5)|deepseek.*(3\.[2-9]|v4)|grok.*(4-5|5)|glm-5|arza|mod/i;
       
-      models.forEach(m => {
-        if (FAKE_REGEX.test(m.id || '')) flagged.push(m.id);
+      const parsedModels = rawModels.map(m => {
+        const id = m.id || '';
+        if (FAKE_REGEX.test(id)) flagged.push(id);
         if (m.owned_by && !['openai', 'anthropic', 'system', 'google', 'meta', 'deepseek'].includes(m.owned_by.toLowerCase())) {
           tenants.add(m.owned_by);
         }
+        return { id, owner: m.owned_by || null };
       });
+
       catalogResult = {
-        count: models.length,
+        count: parsedModels.length,
+        models: parsedModels,
         flagged,
         tenant: tenants.size > 0 ? Array.from(tenants).join(', ') : null
       };
 
       if (!opts.json) {
         if (flagged.length > 0) {
-          console.log(`[*] Catalog Audit: ${models.length} models retrieved (${c.yellow}${flagged.length} non-standard/custom labels${c.reset})`);
+          console.log(`[*] Catalog Audit: ${parsedModels.length} models retrieved (${c.yellow}${flagged.length} non-standard/custom labels${c.reset})`);
           if (catalogResult.tenant) console.log(`[*] Upstream Tenant: ${c.bold}${catalogResult.tenant}${c.reset}`);
         } else {
-          console.log(`[*] Catalog Audit: ${models.length} standard models retrieved (Clean naming).`);
+          console.log(`[*] Catalog Audit: ${parsedModels.length} standard models retrieved (Clean naming).`);
         }
       }
     }
@@ -556,6 +572,16 @@ async function main() {
   if (opts.modelsOnly) {
     if (opts.json) {
       console.log(JSON.stringify(catalogResult, null, 2));
+    } else {
+      console.log(`\n[+] ${c.bold}AVAILABLE UPSTREAM MODELS (${catalogResult.count}):${c.reset}`);
+      console.log('--------------------------------------------------------------------------------');
+      catalogResult.models.forEach(m => {
+        const vendor = detectOriginalVendor(m.id);
+        const ownerTag = m.owner ? ` ${c.dim}[${m.owner}]${c.reset}` : '';
+        const isFlagged = catalogResult.flagged.includes(m.id) ? ` ${c.yellow}(Non-standard)${c.reset}` : '';
+        console.log(`  - ${c.bold}${m.id}${c.reset}${ownerTag} -> ${c.cyan}${vendor.name}${c.reset}${isFlagged}`);
+      });
+      console.log('--------------------------------------------------------------------------------\n');
     }
     process.exit(0);
   }

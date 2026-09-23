@@ -18,6 +18,7 @@ import ssl
 # ANSI Colors
 C_RESET = "\033[0m"
 C_BOLD = "\033[1m"
+C_DIM = "\033[2m"
 C_RED = "\033[31m"
 C_GREEN = "\033[32m"
 C_YELLOW = "\033[33m"
@@ -25,7 +26,7 @@ C_CYAN = "\033[36m"
 
 # Disable color if NO_COLOR env is set or stdout not a tty
 if os.environ.get("NO_COLOR") or not sys.stdout.isatty():
-    C_RESET = C_BOLD = C_RED = C_GREEN = C_YELLOW = C_CYAN = ""
+    C_RESET = C_BOLD = C_DIM = C_RED = C_GREEN = C_YELLOW = C_CYAN = ""
 
 
 def detect_vendor(model_id: str):
@@ -128,6 +129,7 @@ class ApiClient:
                 tenants = set()
                 fake_pattern = re.compile(r"claude.*(4-5|4\.5|5|opus-5|sonnet-4-5)|deepseek.*(3\.[2-9]|v4)|grok.*(4-5|5)|glm-5|arza|mod", re.I)
 
+                parsed_models = []
                 for m in models:
                     m_id = m.get("id", "")
                     if fake_pattern.search(m_id):
@@ -135,14 +137,16 @@ class ApiClient:
                     owner = m.get("owned_by", "")
                     if owner and owner.lower() not in ("openai", "anthropic", "system", "google", "meta", "deepseek"):
                         tenants.add(owner)
+                    parsed_models.append({"id": m_id, "owner": owner or None})
 
                 return {
-                    "count": len(models),
+                    "count": len(parsed_models),
+                    "models": parsed_models,
                     "flagged": flagged,
                     "tenant": ", ".join(tenants) if tenants else None
                 }
         except Exception:
-            return {"count": 0, "flagged": [], "tenant": None}
+            return {"count": 0, "models": [], "flagged": [], "tenant": None}
 
     def call_model(self, model: str, messages: list, max_tokens: int = 400, temperature: float = 0.0, response_format: dict = None, stream: bool = False):
         endpoint = f"{self.base_url}/chat/completions" if self.active_proto == "openai" else f"{self.base_url}/messages"
@@ -425,15 +429,24 @@ Examples:
     args = parser.parse_args()
 
     if not args.key:
-        sys.stderr.write(f"{C_RED}Error: Missing API Key. Provide -k <token> or set OPENAI_API_KEY environment variable.{C_RESET}\n")
-        sys.exit(2)
+        print(f"\n{C_BOLD}================================================================================{C_RESET}")
+        print(f" {C_BOLD}{C_CYAN}MODELPROOF CLI{C_RESET} // LLM Proxy & Masking Forensic Scanner (v1.0.0)")
+        print(f"{C_BOLD}================================================================================{C_RESET}")
+        print("Zero-persistence scanner to detect model spoofing, masking, and proxy downgrades.\n")
+        print(f"{C_BOLD}QUICKSTART:{C_RESET}")
+        print("  modelproof -u \"https://my-proxy.com/v1\" -k \"sk-...\" -m \"gpt-4o\"")
+        print("  modelproof -u \"https://my-proxy.com/v1\" -k \"sk-...\" --models-only")
+        print("  modelproof -u \"https://my-proxy.com/v1\" -k \"sk-...\" --all --json\n")
+        print(f"{C_DIM}Or set the environment variable: export OPENAI_API_KEY=\"sk-...\"{C_RESET}")
+        print(f"{C_DIM}Run with --help to see all options.{C_RESET}\n")
+        sys.exit(0)
 
     client = ApiClient(args.base_url, args.key, args.protocol, args.timeout)
     is_en = args.lang == "en"
 
     if not args.json:
         print(f"\n{C_BOLD}================================================================================{C_RESET}")
-        print(f" {C_BOLD}{C_CYAN}MODELPROOF CLI{C_RESET} // LLM Proxy & Masking Forensic Scanner (v2.4.0)")
+        print(f" {C_BOLD}{C_CYAN}MODELPROOF CLI{C_RESET} // LLM Proxy & Masking Forensic Scanner (v1.0.0)")
         print(f" Target: {C_BOLD}{args.model}{C_RESET} @ {args.base_url}")
         print(f"{C_BOLD}================================================================================{C_RESET}")
 
@@ -455,6 +468,15 @@ Examples:
     if args.models_only:
         if args.json:
             print(json.dumps(catalog, indent=2))
+        else:
+            print(f"\n[+] {C_BOLD}AVAILABLE UPSTREAM MODELS ({catalog['count']}):{C_RESET}")
+            print("--------------------------------------------------------------------------------")
+            for m in catalog.get("models", []):
+                v_info = detect_vendor(m["id"])
+                owner_tag = f" {C_DIM}[{m['owner']}]{C_RESET}" if m.get("owner") else ""
+                flag_tag = f" {C_YELLOW}(Non-standard){C_RESET}" if m["id"] in catalog["flagged"] else ""
+                print(f"  - {C_BOLD}{m['id']}{C_RESET}{owner_tag} -> {C_CYAN}{v_info['name']}{C_RESET}{flag_tag}")
+            print("--------------------------------------------------------------------------------\n")
         sys.exit(0)
 
     # Step 3: Vectors
