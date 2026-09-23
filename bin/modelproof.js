@@ -2,7 +2,7 @@
 
 /**
  * MODELPROOF CLI (Node.js)
- * LLM Proxy & Masking Forensic Scanner (v2.4.0)
+ * LLM Proxy & Masking Forensic Scanner (v1.0.0)
  * 100% Zero external dependencies.
  */
 
@@ -28,7 +28,7 @@ const c = {
 // Help text
 function printHelp() {
   console.log(`
-${c.bold}${c.cyan}MODELPROOF CLI // LLM Proxy & Masking Forensic Scanner (v2.4.0)${c.reset}
+${c.bold}${c.cyan}MODELPROOF CLI // LLM Proxy & Masking Forensic Scanner (v1.0.0)${c.reset}
 Detect model spoofing, masking, and downgrading on reverse proxies.
 
 ${c.bold}USAGE:${c.reset}
@@ -75,7 +75,7 @@ function parseArgs() {
     const a = args[i];
     if (a === '-h' || a === '--help') printHelp();
     if (a === '-v' || a === '--version') {
-      console.log('2.4.0');
+      console.log('1.0.0');
       process.exit(0);
     }
     if ((a === '-u' || a === '--base-url') && args[i + 1]) opts.baseUrl = args[++i];

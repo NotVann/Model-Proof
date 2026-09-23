@@ -1,4 +1,4 @@
-# ModelProof 🛡️
+# ModelProof 🛡️ (v1.0.0)
 > Zero-persistence client-side and CLI forensic scanner to detect LLM model spoofing, proxy masking, and silent downgrades.
 
 Available as:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 MODELPROOF CLI (Python)
-LLM Proxy & Masking Forensic Scanner (v2.4.0)
+LLM Proxy & Masking Forensic Scanner (v1.0.0)
 100% Zero external dependencies (uses standard library urllib).
 """
 
@@ -402,7 +402,7 @@ def vec10_type_logic(client: ApiClient, model: str):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="ModelProof CLI: Zero-persistence LLM Proxy & Masking Forensic Scanner (v2.4.0)",
+        description="ModelProof CLI: Zero-persistence LLM Proxy & Masking Forensic Scanner (v1.0.0)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -420,7 +420,7 @@ Examples:
     parser.add_argument("--lang", default="en", choices=["en", "id"], help="Output language (default: en)")
     parser.add_argument("--json", action="store_true", help="Output pure JSON report for CI/CD pipelines")
     parser.add_argument("--timeout", type=int, default=30, help="Per-request timeout in seconds (default: 30)")
-    parser.add_argument("-v", "--version", action="version", version="2.4.0")
+    parser.add_argument("-v", "--version", action="version", version="1.0.0")
 
     args = parser.parse_args()
 
