@@ -49,9 +49,9 @@ ${c.bold}OPTIONS:${c.reset}
   -h, --help                Show this help message
 
 ${c.bold}EXAMPLES:${c.reset}
-  npx modelproof -u "https://router.arzastore.com/v1" -k "sk-..." -m "qwen-3-8-max"
-  npx modelproof -u "https://api.openai.com/v1" -k "$OPENAI_API_KEY" -m "gpt-4o" --json
-  npx modelproof -u "https://my-proxy.com/v1" -k "sk-..." --models-only
+  npx modelproof -u "https://api.openai.com/v1" -k "$OPENAI_API_KEY" -m "gpt-4o"
+  npx modelproof -u "https://my-custom-proxy.com/v1" -k "sk-..." -m "claude-3-5-sonnet-20241022" --all
+  npx modelproof -u "https://my-custom-proxy.com/v1" -k "sk-..." --models-only
 `);
   process.exit(0);
 }

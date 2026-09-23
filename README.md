@@ -28,7 +28,7 @@ Available as:
 ### Option A: NPX (No installation required)
 ```bash
 # Instant audit via npx
-npx modelproof -u "https://router.arzastore.com/v1" -k "sk-..." -m "qwen-3-8-max"
+npx modelproof -u "https://my-custom-proxy.com/v1" -k "sk-..." -m "qwen-2.5-72b-instruct"
 
 # Deep audit with all 10 vectors + JSON output
 npx modelproof -u "https://api.openai.com/v1" -k "$OPENAI_API_KEY" -m "gpt-4o" --all --json
@@ -40,10 +40,10 @@ npx modelproof -u "https://api.openai.com/v1" -k "$OPENAI_API_KEY" -m "gpt-4o" -
 pip install modelproof
 
 # Run audit
-modelproof -u "https://router.arzastore.com/v1" -k "sk-..." -m "qwen-3-8-max"
+modelproof -u "https://my-custom-proxy.com/v1" -k "sk-..." -m "claude-3-5-sonnet-20241022"
 
 # Audit catalog only
-modelproof -u "https://router.arzastore.com/v1" -k "sk-..." --models-only
+modelproof -u "https://my-custom-proxy.com/v1" -k "sk-..." --models-only
 ```
 
 ### CLI Options:

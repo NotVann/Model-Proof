@@ -406,9 +406,9 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  modelproof -u https://router.arzastore.com/v1 -k sk-xxx -m qwen-3-8-max
-  modelproof -u https://api.openai.com/v1 -k $OPENAI_API_KEY -m gpt-4o --json
-  modelproof -u https://my-proxy.com/v1 -k sk-xxx --models-only
+  modelproof -u https://api.openai.com/v1 -k $OPENAI_API_KEY -m gpt-4o
+  modelproof -u https://my-custom-proxy.com/v1 -k sk-xxx -m claude-3-5-sonnet-20241022 --all
+  modelproof -u https://my-custom-proxy.com/v1 -k sk-xxx --models-only
 """
     )
     parser.add_argument("-u", "--base-url", default=os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1"), help="Reverse proxy base URL")
