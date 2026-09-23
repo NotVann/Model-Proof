@@ -543,17 +543,17 @@ function renderTestCheckboxes() {
       <div class="checkbox-box ${checkboxBoxClass}">
         ${checkmarkSvg}
       </div>
-      <div class="space-y-0.5 flex-1 pointer-events-none">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="${isChecked ? 'text-emerald-400' : 'text-zinc-500'} transition-colors">${t.svg}</span>
-            <span class="text-xs font-mono font-medium ${isChecked ? 'text-zinc-100' : 'text-zinc-300'} transition-colors">${String(t.id).padStart(2, '0')}. ${info.name}</span>
+      <div class="space-y-0.5 flex-1 pointer-events-none min-w-0">
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-1.5 min-w-0">
+            <span class="${isChecked ? 'text-emerald-400' : 'text-zinc-500'} transition-colors flex items-center justify-center shrink-0 w-4 h-4">${t.svg}</span>
+            <span class="text-xs font-mono font-medium ${isChecked ? 'text-zinc-100' : 'text-zinc-300'} transition-colors truncate">${String(t.id).padStart(2, '0')}. ${info.name}</span>
           </div>
           ${t.quick 
-            ? '<span class="text-[9px] px-1.5 py-0.2 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 font-mono">FAST</span>' 
-            : '<span class="text-[9px] px-1.5 py-0.2 rounded bg-purple-950/50 text-purple-300 border border-purple-800/40 font-mono">DEEP</span>'}
+            ? '<span class="text-[9px] px-1.5 py-0.2 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 font-mono shrink-0">FAST</span>' 
+            : '<span class="text-[9px] px-1.5 py-0.2 rounded bg-purple-950/50 text-purple-300 border border-purple-800/40 font-mono shrink-0">DEEP</span>'}
         </div>
-        <p class="text-[11px] text-zinc-500 font-sans leading-tight pl-5">${info.desc}</p>
+        <p class="text-[11px] text-zinc-500 font-sans leading-tight pl-5.5">${info.desc}</p>
       </div>
     `;
 
@@ -599,10 +599,10 @@ function renderPipelineRows() {
     row.innerHTML = `
       <div class="space-y-0.5 min-w-0 flex-1">
         <div class="flex items-center gap-2">
-          <span class="test-icon text-xs text-zinc-600 font-mono shrink-0"><i class="fa-regular fa-circle"></i></span>
+          <span class="test-icon text-xs text-zinc-600 font-mono shrink-0 flex items-center justify-center w-4 h-4"><i class="fa-regular fa-circle"></i></span>
           <span class="text-xs font-mono font-medium text-zinc-300 truncate">${String(t.id).padStart(2, '0')}. ${info.name}</span>
         </div>
-        <p class="text-[11px] text-zinc-500 test-detail font-sans pl-5 break-words">${info.desc}</p>
+        <p class="text-[11px] text-zinc-500 test-detail font-sans pl-6 break-words">${info.desc}</p>
       </div>
       <span class="test-status font-mono text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 uppercase tracking-wider shrink-0 mt-0.5">${initialStatus}</span>
     `;
@@ -895,37 +895,37 @@ function initUI() {
 }
 
 function updateProtocolUI() {
-  const activeClass = 'py-1.5 px-2 rounded-md transition-all flex items-center justify-center gap-1.5 font-medium bg-emerald-950/40 text-emerald-400 border border-emerald-500/50 shadow-sm';
-  const inactiveClass = 'py-1.5 px-2 rounded-md transition-all flex items-center justify-center gap-1.5 font-medium text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/40 border border-transparent';
+  const activeClass = 'py-1.5 px-1 sm:px-2 rounded-md transition-all flex items-center justify-center gap-1 sm:gap-1.5 font-medium bg-emerald-950/40 text-emerald-400 border border-emerald-500/50 shadow-sm leading-none';
+  const inactiveClass = 'py-1.5 px-1 sm:px-2 rounded-md transition-all flex items-center justify-center gap-1 sm:gap-1.5 font-medium text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/40 border border-transparent leading-none';
 
-  const checkSvg = `<svg class="w-3.5 h-3.5 text-emerald-400 stroke-[3] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+  const checkSvg = `<svg class="w-3.5 h-3.5 text-emerald-400 stroke-[3] shrink-0 inline-block align-middle" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
   </svg>`;
 
-  const openaiLogo = `<svg class="w-3 h-3 fill-current shrink-0" viewBox="0 0 24 24"><path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1683a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4947zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1683a.0757.0757 0 0 1-.071 0l-4.8303-2.7866A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.6668zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1635a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/></svg>`;
+  const openaiLogo = `<svg class="w-3.5 h-3.5 fill-current shrink-0 inline-block align-middle" viewBox="0 0 24 24"><path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1683a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4947zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1683a.0757.0757 0 0 1-.071 0l-4.8303-2.7866A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.6668zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1635a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/></svg>`;
   
-  const anthropicLogo = `<svg class="w-3 h-3 fill-current shrink-0" viewBox="0 0 24 24"><path d="M17.472 17.514h-3.44l-1.077-3.136H8.056l-1.078 3.136H3.538L9.208 2.2h4.584l5.68 15.314zM11.95 6.435L9.167 14.15h3.666l-.883-7.715zM20.462 2.2h3.538v15.314h-3.538z"/></svg>`;
+  const anthropicLogo = `<svg class="w-3.5 h-3.5 fill-current shrink-0 inline-block align-middle" viewBox="0 0 24 24"><path d="M13.827 3.5H18.7L24 20.5H19.127L17.755 16.036H11.518L10.146 20.5H5.273L10.573 3.5H13.827ZM16.482 12.018L14.636 5.964L12.791 12.018H16.482ZM0 20.5L5.3 3.5H9.727L4.427 20.5H0Z"/></svg>`;
 
   if (state.protocolMode === 'auto') {
     el.protoAuto.className = activeClass;
-    el.protoAuto.innerHTML = `${checkSvg}<span>Auto</span>`;
+    el.protoAuto.innerHTML = `${checkSvg}<span class="inline-block leading-none">Auto</span>`;
 
     el.protoOpenai.className = inactiveClass;
-    el.protoOpenai.innerHTML = `${openaiLogo}<span>OpenAI</span>`;
+    el.protoOpenai.innerHTML = `${openaiLogo}<span class="inline-block leading-none">OpenAI</span>`;
 
     el.protoAnthropic.className = inactiveClass;
-    el.protoAnthropic.innerHTML = `${anthropicLogo}<span>Anthropic</span>`;
+    el.protoAnthropic.innerHTML = `${anthropicLogo}<span class="inline-block leading-none">Anthropic</span>`;
     
     updateProtocolBadge('AUTO: STANDBY', false);
   } else if (state.protocolMode === 'openai') {
     el.protoAuto.className = inactiveClass;
-    el.protoAuto.innerHTML = `<span>Auto</span>`;
+    el.protoAuto.innerHTML = `<span class="inline-block leading-none">Auto</span>`;
 
     el.protoOpenai.className = activeClass;
-    el.protoOpenai.innerHTML = `${checkSvg}<span>OpenAI</span>`;
+    el.protoOpenai.innerHTML = `${checkSvg}<span class="inline-block leading-none">OpenAI</span>`;
 
     el.protoAnthropic.className = inactiveClass;
-    el.protoAnthropic.innerHTML = `${anthropicLogo}<span>Anthropic</span>`;
+    el.protoAnthropic.innerHTML = `${anthropicLogo}<span class="inline-block leading-none">Anthropic</span>`;
 
     state.detectedProtocol = 'openai';
     updateProtocolBadge('MANUAL: OPENAI', false);
@@ -934,13 +934,13 @@ function updateProtocolUI() {
     }
   } else {
     el.protoAuto.className = inactiveClass;
-    el.protoAuto.innerHTML = `<span>Auto</span>`;
+    el.protoAuto.innerHTML = `<span class="inline-block leading-none">Auto</span>`;
 
     el.protoOpenai.className = inactiveClass;
-    el.protoOpenai.innerHTML = `${openaiLogo}<span>OpenAI</span>`;
+    el.protoOpenai.innerHTML = `${openaiLogo}<span class="inline-block leading-none">OpenAI</span>`;
 
     el.protoAnthropic.className = activeClass;
-    el.protoAnthropic.innerHTML = `${checkSvg}<span>Anthropic</span>`;
+    el.protoAnthropic.innerHTML = `${checkSvg}<span class="inline-block leading-none">Anthropic</span>`;
 
     state.detectedProtocol = 'anthropic';
     updateProtocolBadge('MANUAL: ANTHROPIC', false);
@@ -1323,22 +1323,22 @@ function updateTestRow(testId, status, detailText = null) {
   if (detailText) detail.textContent = detailText;
 
   if (status === 'RUNNING') {
-    icon.innerHTML = `<svg class="w-3.5 h-3.5 text-cyan-400 animate-spin-fast shrink-0 inline-block" viewBox="0 0 50 50">
+    icon.innerHTML = `<svg class="w-3.5 h-3.5 text-cyan-400 animate-spin-fast shrink-0 inline-block align-middle" viewBox="0 0 50 50">
       <circle class="opacity-20" cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="4"></circle>
       <circle class="spinner-circle-morph" cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="4"></circle>
     </svg>`;
     statusBadge.textContent = state.lang === 'en' ? 'RUNNING' : 'PROSES';
     statusBadge.className = 'test-status font-mono text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 uppercase';
   } else if (status === 'PASSED') {
-    icon.innerHTML = `<svg class="w-3.5 h-3.5 text-emerald-400 shrink-0 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
+    icon.innerHTML = `<svg class="w-3.5 h-3.5 text-emerald-400 shrink-0 inline-block align-middle" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
     statusBadge.textContent = state.lang === 'en' ? 'PASSED' : 'LOLOS';
     statusBadge.className = 'test-status font-mono text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 uppercase';
   } else if (status === 'WARNING') {
-    icon.innerHTML = `<svg class="w-3.5 h-3.5 text-yellow-400 shrink-0 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`;
+    icon.innerHTML = `<svg class="w-3.5 h-3.5 text-yellow-400 shrink-0 inline-block align-middle" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`;
     statusBadge.textContent = state.lang === 'en' ? 'SUSPICIOUS' : 'CURIGA';
     statusBadge.className = 'test-status font-mono text-[10px] px-2 py-0.5 rounded bg-yellow-950 text-yellow-400 border border-yellow-800 uppercase';
   } else if (status === 'FAILED') {
-    icon.innerHTML = `<svg class="w-3.5 h-3.5 text-rose-400 shrink-0 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
+    icon.innerHTML = `<svg class="w-3.5 h-3.5 text-rose-400 shrink-0 inline-block align-middle" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
     statusBadge.textContent = state.lang === 'en' ? 'FAILED' : 'GAGAL';
     statusBadge.className = 'test-status font-mono text-[10px] px-2 py-0.5 rounded bg-rose-950 text-rose-400 border border-rose-800 uppercase';
   } else if (status === 'PENDING' || status === 'READY') {
