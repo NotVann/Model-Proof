@@ -899,20 +899,33 @@ function getModelFamily(modelId = '') {
 function extractIdentityEntity(text = '') {
   if (!text) return null;
   
-  // Patterns like "I am Kiro", "I'm Kiro", "saya adalah Kiro", "saya Kiro", "name is Kiro", "as an AI created by X"
-  const patterns = [
+  // 1. Quota / Reseller injected notice detection
+  if (/sisa token|kuota token|token balance|peringatan: sisa/i.test(text)) {
+    return { type: 'quota_leak', name: 'Injected Quota Banner' };
+  }
+
+  // 2. Direct Bot Identity Confession patterns (e.g. "I am Kiro", "I'm Kiro", "nama saya Kiro")
+  const identityPatterns = [
     /(?:i am|i'm|saya|nama saya|aku)\s+([A-Z][a-zA-Z0-9_\-\.]{2,20})/i,
     /(?:name is|called)\s+([A-Z][a-zA-Z0-9_\-\.]{2,20})/i,
-    /(?:created by|trained by|developed by|buatan)\s+([A-Z][a-zA-Z0-9_\-\. ]{2,30})/i,
-    /(?:sisa token|kuota token|token balance|arza|kiro)/i
+    /(?:created by|trained by|developed by|buatan)\s+([A-Z][a-zA-Z0-9_\-\. ]{2,30})/i
   ];
 
-  for (const regex of patterns) {
+  for (const regex of identityPatterns) {
     const match = text.match(regex);
-    if (match) {
-      return match[1] || match[0];
+    if (match && match[1]) {
+      const candidate = match[1].trim();
+      // Filter false positives
+      if (!/^(an|a|the|ready|here|glad|happy|an AI|your|an assistant|sisa|kuota)$/i.test(candidate)) {
+        return { type: 'bot_name', name: candidate };
+      }
     }
   }
+
+  // 3. Known reseller proxies / bot names
+  if (/kiro/i.test(text)) return { type: 'bot_name', name: 'Kiro' };
+  if (/arza/i.test(text)) return { type: 'bot_name', name: 'Arza' };
+
   return null;
 }
 
@@ -1079,12 +1092,21 @@ Respond strictly in JSON: {"r_count": <number>, "reversed": "<string>", "math": 
   // Extract potential entity leaks from raw response
   const entity = extractIdentityEntity(res.content);
   if (entity) {
-    auditState.findings.push({
-      category: 'identity',
-      severity: 'critical',
-      headline: `Bot Mengaku Sebagai '${entity}'`,
-      desc: `Pada tes logika, bot secara spontan merespons dengan identitas '${entity}'. Model resmi ${state.claimedModel} tidak pernah merespons dengan nama ini.`
-    });
+    if (entity.type === 'quota_leak') {
+      auditState.findings.push({
+        category: 'identity',
+        severity: 'critical',
+        headline: 'Injeksi Pesan Kuota Penjual (Bukan Respon AI Bersih)',
+        desc: `Respon output disisipi pesan bot/proxy penjual: "Peringatan: sisa token kamu...". Model API resmi tidak pernah menyuntikkan teks kuota ke dalam output jawaban model.`
+      });
+    } else {
+      auditState.findings.push({
+        category: 'identity',
+        severity: 'critical',
+        headline: `Bot Mengaku Sebagai '${entity.name}'`,
+        desc: `Pada tes logika, bot secara spontan merespons dengan identitas '${entity.name}'. Model resmi ${state.claimedModel} tidak pernah merespons dengan nama ini.`
+      });
+    }
   }
 
   try {
@@ -1100,7 +1122,7 @@ Respond strictly in JSON: {"r_count": <number>, "reversed": "<string>", "math": 
       category: 'logic',
       severity: 'warning',
       headline: 'Akurasi Penalaran Karakter Gagal',
-      desc: `Model menghitung jumlah huruf 'r' keliru (dihasilkan: ${parsed.r_count}, seharusnya: 3). Model tier flagship (Claude Sonnet/GPT-4o) selalu menjawab 3 dengan benar.`
+      desc: `Model menghitung jumlah huruf 'r' keliru (dihasilkan: ${parsed.r_count}, seharusnya: 3). Model tier flagship selalu menjawab 3 dengan benar.`
     });
 
     updateTestRow(1, 'FAILED', `Logic error: r=${parsed.r_count} (expected 3). Mini/Llama downgrade.`);
@@ -1127,12 +1149,12 @@ async function runTest2() {
 
   // Check identity leaks in content
   const entity = extractIdentityEntity(res.content);
-  if (entity) {
+  if (entity && entity.type === 'bot_name') {
     auditState.findings.push({
       category: 'identity',
       severity: 'critical',
-      headline: `Bot Terdeteksi Bernama '${entity}'`,
-      desc: `Respon output membocorkan identitas bot/proxy '${entity}'.`
+      headline: `Bot Terdeteksi Bernama '${entity.name}'`,
+      desc: `Respon output membocorkan identitas bot/proxy '${entity.name}'.`
     });
   }
 
@@ -1203,13 +1225,23 @@ Format strictly: CREATOR: <Name> | ARCHITECTURE: <Name>`;
   const entity = extractIdentityEntity(raw);
   if (entity) {
     passed = false;
-    note = `CRITICAL: Model identified itself as '${entity}'!`;
-    auditState.findings.push({
-      category: 'identity',
-      severity: 'critical',
-      headline: `Model Mengaku Bernama '${entity}'`,
-      desc: `Saat ditanya identitas dasarnya, bot menjawab sebagai '${entity}' bukannya model resmi ${state.claimedModel}.`
-    });
+    if (entity.type === 'quota_leak') {
+      note = 'CRITICAL: Injected quota banner detected in raw output!';
+      auditState.findings.push({
+        category: 'identity',
+        severity: 'critical',
+        headline: 'Output Disuntik Teks Kuota Penjual',
+        desc: 'Sistem proxy membubuhkan teks sisa kuota/token ke output jawaban, membuktikan adanya perantara proxy tidak resmi.'
+      });
+    } else {
+      note = `CRITICAL: Model identified itself as '${entity.name}'!`;
+      auditState.findings.push({
+        category: 'identity',
+        severity: 'critical',
+        headline: `Model Mengaku Bernama '${entity.name}'`,
+        desc: `Saat ditanya identitas dasarnya, bot menjawab sebagai '${entity.name}' bukannya model resmi ${state.claimedModel}.`
+      });
+    }
   }
 
   if (claimed.includes('claude') && (low.includes('openai') || low.includes('meta') || low.includes('deepseek') || low.includes('llama'))) {
@@ -1272,10 +1304,14 @@ async function runTest4() {
     }
 
     const ttft = Math.round(firstToken ? firstToken - startTime : 0);
-    const duration = (performance.now() - startTime) / 1000 - (ttft / 1000);
+    const totalTime = (performance.now() - startTime) / 1000;
+    const streamDuration = Math.max(0.1, totalTime - (ttft / 1000));
     const words = fullText.trim().split(/\s+/).filter(Boolean).length;
     const estTokens = Math.max(chunks, Math.round(words * 1.3));
-    const tps = duration > 0 ? Math.round(estTokens / duration) : 0;
+    // If proxy buffered all tokens into a single chunk, cap TPS calculation to total request time
+    const tps = chunks <= 2 
+      ? (totalTime > 0 ? Math.round(estTokens / totalTime) : 0)
+      : (streamDuration > 0 ? Math.round(estTokens / streamDuration) : 0);
 
     el.statTtft.textContent = `${ttft} ms`;
     el.statTps.textContent = `${tps} TPS`;
