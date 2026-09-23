@@ -561,9 +561,9 @@ async function fetchAvailableModels() {
   const origBtnText = el.btnFetchModels.innerHTML;
   el.btnFetchModels.disabled = true;
   el.btnFetchModels.innerHTML = `
-    <svg class="w-3.5 h-3.5 text-emerald-400 animate-spin-fast shrink-0" viewBox="0 0 24 24" fill="none">
-      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    <svg class="w-3.5 h-3.5 text-emerald-400 animate-spin-fast shrink-0" viewBox="0 0 50 50">
+      <circle class="opacity-20" cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="4"></circle>
+      <circle class="spinner-circle-morph" cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="4"></circle>
     </svg>
     <span>Querying...</span>
   `;
@@ -782,7 +782,7 @@ async function callModel({ messages, stream = false, maxTokens = 500, temperatur
   if (state.corsProxy) endpoint = state.corsProxy + endpoint;
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout safety
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout for heavy slow models
 
   const startTime = performance.now();
   let res;
@@ -855,9 +855,9 @@ function updateTestRow(testId, status, detailText = null) {
   if (detailText) detail.textContent = detailText;
 
   if (status === 'RUNNING') {
-    icon.innerHTML = `<svg class="w-3.5 h-3.5 text-cyan-400 animate-spin-fast shrink-0 inline-block" viewBox="0 0 24 24" fill="none">
-      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    icon.innerHTML = `<svg class="w-3.5 h-3.5 text-cyan-400 animate-spin-fast shrink-0 inline-block" viewBox="0 0 50 50">
+      <circle class="opacity-20" cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="4"></circle>
+      <circle class="spinner-circle-morph" cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="4"></circle>
     </svg>`;
     statusBadge.textContent = 'RUNNING';
     statusBadge.className = 'test-status font-mono text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 uppercase';
@@ -1504,9 +1504,9 @@ async function startAudit() {
   auditState.findings = []; // Reset findings for clean audit run
   el.btnStartAudit.disabled = true;
   el.btnStartAudit.innerHTML = `
-    <svg class="w-4 h-4 text-zinc-950 animate-spin-fast shrink-0" viewBox="0 0 24 24" fill="none">
-      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    <svg class="w-4 h-4 text-zinc-950 animate-spin-fast shrink-0" viewBox="0 0 50 50">
+      <circle class="opacity-20" cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="4"></circle>
+      <circle class="spinner-circle-morph" cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="4"></circle>
     </svg>
     <span>Running Audit...</span>
   `;
@@ -1544,8 +1544,20 @@ async function startAudit() {
 
     for (let i = 0; i < activeTests.length; i++) {
       const t = activeTests[i];
-      const result = await t.run();
-      testResults.push(result);
+      try {
+        const result = await t.run();
+        testResults.push(result);
+      } catch (vectorErr) {
+        appendLog(`[Vector ${t.id}] Interrupted: ${vectorErr.message}`, 'error');
+        updateTestRow(t.id, 'FAILED', `Error: ${vectorErr.message}`);
+        testResults.push({ score: 0.0 });
+        auditState.findings.push({
+          category: 'compliance',
+          severity: 'warning',
+          headline: `Vektor ${t.name} Timeout / Gagal Respons`,
+          desc: `Model tidak merespons pengujian (${vectorErr.message}). Kemungkinan server upstream overload atau memblokir payload tes.`
+        });
+      }
       el.suiteProgressText.textContent = `${i + 1}/${activeTests.length} Completed`;
     }
 

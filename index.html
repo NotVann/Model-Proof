@@ -62,8 +62,26 @@
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
     }
+    @keyframes spinnerDash {
+      0% {
+        stroke-dasharray: 1, 150;
+        stroke-dashoffset: 0;
+      }
+      50% {
+        stroke-dasharray: 90, 150;
+        stroke-dashoffset: -35;
+      }
+      100% {
+        stroke-dasharray: 90, 150;
+        stroke-dashoffset: -124;
+      }
+    }
     .animate-spin-fast {
-      animation: spin 0.75s linear infinite;
+      animation: spin 1.4s linear infinite;
+    }
+    .spinner-circle-morph {
+      stroke-linecap: round;
+      animation: spinnerDash 1.4s ease-in-out infinite;
     }
 
     .panel {
