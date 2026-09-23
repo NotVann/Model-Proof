@@ -37,7 +37,7 @@
   
   <!-- Header -->
   <header class="border-b border-gray-800 bg-gray-950/80 sticky top-0 z-50 backdrop-blur">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center space-x-3">
         <div class="w-8 h-8 rounded bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center font-bold text-black text-sm">
           <i class="fa-solid fa-shield-halved"></i>
@@ -45,36 +45,35 @@
         <div>
           <h1 class="font-bold text-base tracking-wide flex items-center gap-2">
             ModelMask<span class="text-emerald-400">Scanner</span>
-            <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 font-mono">SERVERLESS</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 font-mono">10-VECTOR MODULAR</span>
           </h1>
-          <p class="text-xs text-gray-400">Detect model downgrade, proxy spoofing & BPE anomalies</p>
+          <p class="text-xs text-gray-400">Anti-downgrade & proxy spoofing inspection suite</p>
         </div>
       </div>
-      <div class="flex items-center space-x-3">
-        <a href="https://github.com" target="_blank" class="text-xs text-gray-400 hover:text-white transition flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-800 hover:border-gray-700 bg-gray-900">
-          <i class="fa-brands fa-github text-sm"></i>
-          <span>GitHub</span>
-        </a>
+      <div class="flex items-center space-x-2 text-xs font-mono">
+        <span class="px-2.5 py-1 rounded bg-gray-900 border border-gray-800 text-gray-400">100% Serverless</span>
       </div>
     </div>
   </header>
 
   <!-- Main Container -->
-  <main class="max-w-6xl mx-auto px-4 py-6 flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+  <main class="max-w-7xl mx-auto px-4 py-6 flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
     
-    <!-- Left Column: Controls & Configuration -->
+    <!-- Left Column: Config & Modular Test Selector -->
     <div class="lg:col-span-5 space-y-5">
+      
+      <!-- Endpoint Config -->
       <div class="glass p-5 rounded-xl space-y-4">
         <div class="flex items-center justify-between border-b border-gray-800 pb-3">
-          <h2 class="text-sm font-semibold tracking-wider text-gray-300 uppercase flex items-center gap-2">
-            <i class="fa-solid fa-sliders text-emerald-400"></i> Endpoint Config
+          <h2 class="text-xs font-semibold tracking-wider text-gray-300 uppercase flex items-center gap-2">
+            <i class="fa-solid fa-sliders text-emerald-400"></i> Target API Config
           </h2>
-          <span class="text-[11px] text-gray-500 font-mono">100% Client-Side</span>
+          <span class="text-[10px] text-emerald-500/80 font-mono"><i class="fa-solid fa-lock"></i> Memory Only</span>
         </div>
 
         <!-- Protocol Selection -->
         <div class="space-y-1.5">
-          <label class="text-xs font-medium text-gray-400">API Protocol</label>
+          <label class="text-xs font-medium text-gray-400">Protocol</label>
           <div class="grid grid-cols-2 gap-2 text-xs font-medium">
             <button id="proto-openai" class="py-2 px-3 rounded-lg border border-emerald-500 bg-emerald-500/10 text-emerald-400 transition flex items-center justify-center gap-2">
               <i class="fa-solid fa-bolt"></i> OpenAI Compatible
@@ -86,7 +85,7 @@
         </div>
 
         <!-- Target Base URL -->
-        <div class="space-y-1.5">
+        <div class="space-y-1">
           <label class="text-xs font-medium text-gray-400 flex items-center justify-between">
             <span>Base URL</span>
             <span class="text-[10px] text-gray-500">e.g. https://api.seller.com/v1</span>
@@ -96,11 +95,8 @@
         </div>
 
         <!-- Target API Key -->
-        <div class="space-y-1.5">
-          <label class="text-xs font-medium text-gray-400 flex items-center justify-between">
-            <span>API Key</span>
-            <span class="text-[10px] text-emerald-500/80"><i class="fa-solid fa-lock"></i> Memory Only</span>
-          </label>
+        <div class="space-y-1">
+          <label class="text-xs font-medium text-gray-400">API Key</label>
           <div class="relative">
             <input type="password" id="target-api-key" placeholder="sk-..." 
               class="w-full bg-gray-900 border border-gray-800 focus:border-emerald-500 rounded-lg px-3 py-2 text-xs font-mono text-gray-200 outline-none transition pr-9">
@@ -111,11 +107,8 @@
         </div>
 
         <!-- Claimed Model Preset -->
-        <div class="space-y-1.5">
-          <label class="text-xs font-medium text-gray-400 flex items-center justify-between">
-            <span>Claimed Model to Audit</span>
-            <span class="text-[10px] text-gray-500">What seller sold you</span>
-          </label>
+        <div class="space-y-1">
+          <label class="text-xs font-medium text-gray-400">Claimed Model (Target to verify)</label>
           <div class="relative">
             <select id="claimed-model-select" class="w-full bg-gray-900 border border-gray-800 focus:border-emerald-500 rounded-lg px-3 py-2 text-xs font-mono text-gray-200 outline-none transition appearance-none">
               <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (claude-3-5-sonnet-20241022)</option>
@@ -124,45 +117,56 @@
               <option value="gpt-4o-mini">GPT-4o Mini (gpt-4o-mini)</option>
               <option value="o1">OpenAI o1 (o1 / o1-preview)</option>
               <option value="o3-mini">OpenAI o3-mini (o3-mini)</option>
+              <option value="deepseek-r1">DeepSeek R1 (deepseek-r1)</option>
               <option value="custom">-- Custom Model Name --</option>
             </select>
             <i class="fa-solid fa-chevron-down absolute right-3 top-3 text-[10px] text-gray-500 pointer-events-none"></i>
           </div>
-          <input type="text" id="claimed-model-custom" placeholder="Enter custom model string..." 
+          <input type="text" id="claimed-model-custom" placeholder="Enter model ID..." 
             class="hidden w-full mt-2 bg-gray-900 border border-gray-800 focus:border-emerald-500 rounded-lg px-3 py-2 text-xs font-mono text-gray-200 outline-none transition">
         </div>
 
-        <!-- Optional CORS Proxy Setting -->
+        <!-- Optional CORS Proxy -->
         <div class="pt-2 border-t border-gray-800/80">
           <button id="toggle-cors-opts" class="text-[11px] text-gray-400 hover:text-gray-200 flex items-center justify-between w-full py-1">
             <span class="flex items-center gap-1.5">
-              <i class="fa-solid fa-network-wired text-cyan-400"></i> CORS Relay Settings
+              <i class="fa-solid fa-network-wired text-cyan-400"></i> CORS Settings
             </span>
-            <span id="cors-status-label" class="text-[10px] text-emerald-400">Direct (Default)</span>
+            <span id="cors-status-label" class="text-[10px] text-emerald-400">Direct</span>
           </button>
           <div id="cors-options-drawer" class="hidden mt-2 space-y-2 p-3 bg-gray-900/60 rounded-lg border border-gray-800/60 text-xs">
-            <label class="text-[11px] text-gray-400 block">Custom CORS Proxy Prefix (Leave empty for Direct):</label>
             <input type="text" id="cors-proxy-prefix" placeholder="https://your-worker.workers.dev/?" 
               class="w-full bg-gray-950 border border-gray-800 focus:border-cyan-500 rounded px-2.5 py-1.5 text-[11px] font-mono text-gray-300 outline-none">
-            <p class="text-[10px] text-gray-500">Most reseller proxies (NewAPI/OneAPI) allow CORS natively. Only use if browser throws CORS error.</p>
+            <p class="text-[10px] text-gray-500">Only needed if target endpoint blocks browser cross-origin requests.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Test Vector Toggles (MODULAR SELECTOR) -->
+      <div class="glass p-5 rounded-xl space-y-3">
+        <div class="flex items-center justify-between border-b border-gray-800 pb-2">
+          <h2 class="text-xs font-semibold tracking-wider text-gray-300 uppercase flex items-center gap-2">
+            <i class="fa-solid fa-list-check text-cyan-400"></i> Active Test Vectors
+          </h2>
+          <div class="flex items-center space-x-2 text-[10px]">
+            <button id="btn-select-all" class="text-emerald-400 hover:underline">All</button>
+            <span class="text-gray-600">|</span>
+            <button id="btn-select-quick" class="text-cyan-400 hover:underline">Quick</button>
+            <span class="text-gray-600">|</span>
+            <button id="btn-select-none" class="text-gray-500 hover:underline">Clear</button>
           </div>
         </div>
 
+        <div class="space-y-2 text-xs max-h-72 overflow-y-auto pr-1 terminal-scroll" id="test-checkboxes-container">
+          <!-- Populated by JavaScript -->
+        </div>
+
         <!-- Trigger Button -->
-        <button id="btn-start-audit" class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 font-semibold text-gray-950 text-xs tracking-wider uppercase transition shadow-lg shadow-emerald-950/40 flex items-center justify-center gap-2">
-          <i class="fa-solid fa-play"></i> Run Masking Audit
+        <button id="btn-start-audit" class="w-full mt-3 py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 font-semibold text-gray-950 text-xs tracking-wider uppercase transition shadow-lg shadow-emerald-950/40 flex items-center justify-center gap-2">
+          <i class="fa-solid fa-play"></i> Run Selected Tests
         </button>
       </div>
 
-      <!-- Quick Guidance -->
-      <div class="glass p-4 rounded-xl text-xs space-y-2 text-gray-400 border-l-2 border-l-emerald-500">
-        <p class="font-semibold text-gray-300 flex items-center gap-1.5">
-          <i class="fa-solid fa-circle-info text-emerald-400"></i> Detection Strategy
-        </p>
-        <p class="text-[11px] leading-relaxed">
-          Seller proxies forward requests to cheap models (Mini/Llama/Deepseek) while spoofing response model names. This tool runs 5 isolated vector probes: Tokenizer math, Spatial logic, System prompts leakage, Streaming TPS, and Strict formatting.
-        </p>
-      </div>
     </div>
 
     <!-- Right Column: Audit Dashboard & Results -->
@@ -194,94 +198,36 @@
             <div id="stat-tps" class="text-sm font-bold font-mono text-gray-300 mt-1">- TPS</div>
           </div>
           <div class="bg-gray-900/60 p-2.5 rounded-lg border border-gray-800/80">
-            <div class="text-[10px] uppercase text-gray-500 font-mono">Token Match</div>
+            <div class="text-[10px] uppercase text-gray-500 font-mono">Token Usage</div>
             <div id="stat-token-match" class="text-sm font-bold font-mono text-gray-300 mt-1">-</div>
           </div>
         </div>
       </div>
 
-      <!-- Test Suites Checklist -->
+      <!-- Test Suites Execution Pipeline View -->
       <div class="glass p-5 rounded-xl space-y-3">
-        <h3 class="text-xs font-semibold text-gray-300 uppercase tracking-wider flex items-center justify-between">
-          <span>Vector Test Pipeline</span>
-          <span id="suite-progress-text" class="text-gray-500 font-mono text-[11px]">0/5 Passed</span>
-        </h3>
+        <div class="flex items-center justify-between border-b border-gray-800 pb-2">
+          <h3 class="text-xs font-semibold text-gray-300 uppercase tracking-wider">
+            Execution Pipeline
+          </h3>
+          <span id="suite-progress-text" class="text-gray-500 font-mono text-[11px]">0/0 Completed</span>
+        </div>
 
-        <div class="space-y-2.5" id="test-pipeline-container">
-          
-          <!-- Test 1 -->
-          <div id="test-row-1" class="p-3 rounded-lg bg-gray-900/70 border border-gray-800/80 flex items-start justify-between gap-3">
-            <div class="space-y-1">
-              <div class="flex items-center gap-2">
-                <span class="test-icon text-xs text-gray-500"><i class="fa-regular fa-circle"></i></span>
-                <span class="text-xs font-medium text-gray-200">Test 1: Logic & Spatial Reasoning Horizon</span>
-              </div>
-              <p class="text-[11px] text-gray-400 test-detail">Multi-constraint obfuscated counting trap (fails on mini/llama-8b models).</p>
-            </div>
-            <span class="test-status font-mono text-[10px] px-2 py-0.5 rounded bg-gray-950 text-gray-500 border border-gray-800 uppercase">PENDING</span>
-          </div>
-
-          <!-- Test 2 -->
-          <div id="test-row-2" class="p-3 rounded-lg bg-gray-900/70 border border-gray-800/80 flex items-start justify-between gap-3">
-            <div class="space-y-1">
-              <div class="flex items-center gap-2">
-                <span class="test-icon text-xs text-gray-500"><i class="fa-regular fa-circle"></i></span>
-                <span class="text-xs font-medium text-gray-200">Test 2: Tokenizer Usage & BPE Precision</span>
-              </div>
-              <p class="text-[11px] text-gray-400 test-detail">Analyzes prompt token count mismatch against true target tokenizer.</p>
-            </div>
-            <span class="test-status font-mono text-[10px] px-2 py-0.5 rounded bg-gray-950 text-gray-500 border border-gray-800 uppercase">PENDING</span>
-          </div>
-
-          <!-- Test 3 -->
-          <div id="test-row-3" class="p-3 rounded-lg bg-gray-900/70 border border-gray-800/80 flex items-start justify-between gap-3">
-            <div class="space-y-1">
-              <div class="flex items-center gap-2">
-                <span class="test-icon text-xs text-gray-500"><i class="fa-regular fa-circle"></i></span>
-                <span class="text-xs font-medium text-gray-200">Test 3: Internal System & Identity Leak Probe</span>
-              </div>
-              <p class="text-[11px] text-gray-400 test-detail">Forced identity reflection and instruction boundary probe.</p>
-            </div>
-            <span class="test-status font-mono text-[10px] px-2 py-0.5 rounded bg-gray-950 text-gray-500 border border-gray-800 uppercase">PENDING</span>
-          </div>
-
-          <!-- Test 4 -->
-          <div id="test-row-4" class="p-3 rounded-lg bg-gray-900/70 border border-gray-800/80 flex items-start justify-between gap-3">
-            <div class="space-y-1">
-              <div class="flex items-center gap-2">
-                <span class="test-icon text-xs text-gray-500"><i class="fa-regular fa-circle"></i></span>
-                <span class="text-xs font-medium text-gray-200">Test 4: Stream Speed & Telemetry Fingerprint</span>
-              </div>
-              <p class="text-[11px] text-gray-400 test-detail">Detects hyper-fast inference engines (Groq/SambaNova spoofing flagship models).</p>
-            </div>
-            <span class="test-status font-mono text-[10px] px-2 py-0.5 rounded bg-gray-950 text-gray-500 border border-gray-800 uppercase">PENDING</span>
-          </div>
-
-          <!-- Test 5 -->
-          <div id="test-row-5" class="p-3 rounded-lg bg-gray-900/70 border border-gray-800/80 flex items-start justify-between gap-3">
-            <div class="space-y-1">
-              <div class="flex items-center gap-2">
-                <span class="test-icon text-xs text-gray-500"><i class="fa-regular fa-circle"></i></span>
-                <span class="text-xs font-medium text-gray-200">Test 5: Zero-Fluff Formatting Discipline</span>
-              </div>
-              <p class="text-[11px] text-gray-400 test-detail">Strict pure SVG/JSON output without conversational filler preamble.</p>
-            </div>
-            <span class="test-status font-mono text-[10px] px-2 py-0.5 rounded bg-gray-950 text-gray-500 border border-gray-800 uppercase">PENDING</span>
-          </div>
-
+        <div class="space-y-2 max-h-[380px] overflow-y-auto pr-1 terminal-scroll" id="test-pipeline-container">
+          <!-- Rendered dynamically based on selected vectors -->
         </div>
       </div>
 
-      <!-- Live Terminal / Raw Inspection Drawer -->
+      <!-- Live Terminal Log -->
       <div class="glass p-4 rounded-xl space-y-2">
         <div class="flex items-center justify-between border-b border-gray-800 pb-2">
           <span class="text-xs font-mono text-gray-400 flex items-center gap-2">
-            <i class="fa-solid fa-terminal text-emerald-400"></i> Execution Log
+            <i class="fa-solid fa-terminal text-emerald-400"></i> Telemetry & Raw Logs
           </span>
           <button id="btn-clear-logs" class="text-[11px] text-gray-500 hover:text-gray-300">Clear</button>
         </div>
-        <div id="console-logs" class="terminal-scroll h-44 overflow-y-auto bg-gray-950 p-3 rounded font-mono text-[11px] text-gray-400 space-y-1 leading-relaxed">
-          <div class="text-gray-600">> System ready. Enter endpoint details & click 'Run Masking Audit'.</div>
+        <div id="console-logs" class="terminal-scroll h-36 overflow-y-auto bg-gray-950 p-3 rounded font-mono text-[11px] text-gray-400 space-y-1 leading-relaxed">
+          <div class="text-gray-600">> System ready. Select desired vectors and click 'Run Selected Tests'.</div>
         </div>
       </div>
 
@@ -289,7 +235,6 @@
 
   </main>
 
-  <!-- Footer -->
   <footer class="border-t border-gray-800/80 py-3 text-center text-xs text-gray-500 bg-gray-950">
     100% Serverless &bull; Zero Server Storage &bull; Open Source Client-Side Inspector
   </footer>
