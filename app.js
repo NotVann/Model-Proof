@@ -291,7 +291,18 @@ const TRANSLATIONS = {
     viewResponse: 'Lihat Respons',
     hideResponse: 'Tutup Respons',
     toastDraftCopied: 'Draft komplain berhasil disalin ke clipboard!',
-    toastCopyFailed: 'Gagal menyalin draft: '
+    toastCopyFailed: 'Gagal menyalin draft: ',
+
+    // Confirmation Modal
+    confirmModalTitle: 'Konfirmasi Audit Forensik',
+    confirmModalSubtitle: 'Verifikasi Target & Konsumsi Kuota',
+    confirmModalDesc: 'Pemindaian forensik akan mengirimkan serangkaian payload uji ke endpoint target untuk memvalidasi keaslian model.',
+    confirmTargetModel: 'Model Target:',
+    confirmActiveVectors: 'Vektor Aktif:',
+    confirmEstTokens: 'Estimasi Token:',
+    confirmQuotaNotice: 'Pastikan API key memiliki kuota aktif. Pengujian ini tidak menyimpan token API di server mana pun.',
+    confirmBtnCancel: 'Batal',
+    confirmBtnProceed: 'Lanjutkan Scan'
   },
   en: {
     clientSandbox: 'Client-Side Sandbox',
@@ -395,7 +406,18 @@ const TRANSLATIONS = {
     viewResponse: 'View Response',
     hideResponse: 'Hide Response',
     toastDraftCopied: 'Dispute evidence copied to clipboard!',
-    toastCopyFailed: 'Failed to copy draft: '
+    toastCopyFailed: 'Failed to copy draft: ',
+
+    // Confirmation Modal
+    confirmModalTitle: 'Forensic Audit Confirmation',
+    confirmModalSubtitle: 'Target Verification & Quota Usage',
+    confirmModalDesc: 'Forensic scan will execute active test payloads against the target endpoint to evaluate model authenticity.',
+    confirmTargetModel: 'Target Model:',
+    confirmActiveVectors: 'Active Vectors:',
+    confirmEstTokens: 'Estimated Tokens:',
+    confirmQuotaNotice: 'Ensure your API key has active quota. This tool operates client-side and never retains tokens.',
+    confirmBtnCancel: 'Cancel',
+    confirmBtnProceed: 'Proceed with Scan'
   }
 };
 
@@ -469,7 +491,16 @@ const el = {
   btnToggleTechDetails: document.getElementById('btn-toggle-tech-details'),
   techDetailsSection: document.getElementById('tech-details-section'),
   techDetailsBtnLabel: document.getElementById('tech-details-btn-label'),
-  techDetailsChevron: document.getElementById('tech-details-chevron')
+  techDetailsChevron: document.getElementById('tech-details-chevron'),
+  // Modal Elements
+  confirmModalBackdrop: document.getElementById('confirm-modal-backdrop'),
+  confirmModalBox: document.getElementById('confirm-modal-box'),
+  btnModalCloseX: document.getElementById('btn-modal-close-x'),
+  btnModalCancel: document.getElementById('btn-modal-cancel'),
+  btnModalProceed: document.getElementById('btn-modal-proceed'),
+  modalTargetModel: document.getElementById('modal-target-model'),
+  modalVectorCount: document.getElementById('modal-vector-count'),
+  modalEstTokens: document.getElementById('modal-est-tokens')
 };
 
 // Global Audit State Tracker for Layman Findings
@@ -3003,5 +3034,65 @@ if (el.btnToggleTechDetails) {
   });
 }
 
-el.btnStartAudit.addEventListener('click', startAudit);
+// Custom Confirmation Modal Controller
+function showConfirmModal() {
+  if (state.isRunning) return;
+  if (!state.apiKey) {
+    showToast('Missing target API Key. Please provide an API token before initiating scan.', 'error');
+    el.apiKey.focus();
+    return;
+  }
+  if (state.selectedTests.length === 0) {
+    showToast('Zero vectors selected. Please enable at least 1 fingerprint vector.', 'warn');
+    return;
+  }
+
+  // Populate dynamic summary details
+  if (el.modalTargetModel) {
+    el.modalTargetModel.textContent = state.claimedModel || 'Custom';
+  }
+  if (el.modalVectorCount) {
+    const total = TEST_REGISTRY.length;
+    el.modalVectorCount.textContent = `${state.selectedTests.length} / ${total} Vectors`;
+  }
+  if (el.modalEstTokens && el.estTokenBadge) {
+    el.modalEstTokens.textContent = el.estTokenBadge.textContent || '~1.200 - 2.500 tk';
+  }
+
+  // Show with smooth animation
+  if (el.confirmModalBackdrop && el.confirmModalBox) {
+    el.confirmModalBackdrop.classList.remove('hidden');
+    requestAnimationFrame(() => {
+      el.confirmModalBox.classList.remove('scale-95', 'opacity-0');
+      el.confirmModalBox.classList.add('scale-100', 'opacity-100');
+    });
+  }
+}
+
+function hideConfirmModal() {
+  if (!el.confirmModalBackdrop || !el.confirmModalBox) return;
+  el.confirmModalBox.classList.remove('scale-100', 'opacity-100');
+  el.confirmModalBox.classList.add('scale-95', 'opacity-0');
+  setTimeout(() => {
+    el.confirmModalBackdrop.classList.add('hidden');
+  }, 200);
+}
+
+// Modal Event Bindings
+if (el.btnModalCloseX) el.btnModalCloseX.addEventListener('click', hideConfirmModal);
+if (el.btnModalCancel) el.btnModalCancel.addEventListener('click', hideConfirmModal);
+if (el.confirmModalBackdrop) {
+  el.confirmModalBackdrop.addEventListener('click', (e) => {
+    if (e.target === el.confirmModalBackdrop) hideConfirmModal();
+  });
+}
+if (el.btnModalProceed) {
+  el.btnModalProceed.addEventListener('click', () => {
+    hideConfirmModal();
+    startAudit();
+  });
+}
+
+// Hook main launch trigger to show confirmation modal first
+el.btnStartAudit.addEventListener('click', showConfirmModal);
 window.addEventListener('DOMContentLoaded', initUI);

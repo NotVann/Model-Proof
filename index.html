@@ -452,6 +452,68 @@
   <!-- Toast Notification Container (Full width on mobile, floating on desktop) -->
   <div id="toast-container" class="fixed bottom-4 left-3 right-3 sm:left-auto sm:right-5 sm:max-w-sm z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-  <script src="app.js?v=1.0.3"></script>
+  <!-- Custom Confirmation Modal for Launching Audit -->
+  <div id="confirm-modal-backdrop" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 transition-opacity duration-200">
+    <div id="confirm-modal-box" class="panel rounded-xl max-w-md w-full border border-zinc-800 shadow-2xl overflow-hidden transform transition-all duration-200 scale-95 opacity-0">
+      
+      <!-- Modal Header -->
+      <div class="px-5 py-4 border-b border-zinc-800/70 flex items-center justify-between bg-zinc-950/40">
+        <div class="flex items-center gap-2.5">
+          <div class="w-7 h-7 rounded-lg bg-emerald-950/60 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-xs">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div>
+            <h3 class="text-xs font-mono font-semibold text-zinc-100 uppercase tracking-wider" data-i18n="confirmModalTitle">Konfirmasi Audit Forensik</h3>
+            <span class="text-[10px] font-mono text-zinc-500" data-i18n="confirmModalSubtitle">Verifikasi Target & Konsumsi Kuota</span>
+          </div>
+        </div>
+        <button id="btn-modal-close-x" type="button" class="text-zinc-500 hover:text-zinc-300 text-sm transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-5 space-y-3.5 text-xs font-sans text-zinc-300">
+        <p class="leading-relaxed text-zinc-300" data-i18n="confirmModalDesc">
+          Pemindaian forensik akan mengirimkan serangkaian payload uji ke endpoint target untuk memvalidasi keaslian model.
+        </p>
+
+        <!-- Target Parameters Summary Box -->
+        <div class="bg-zinc-950/80 p-3 rounded-lg border border-zinc-800/80 space-y-2 font-mono text-[11px]">
+          <div class="flex items-center justify-between text-zinc-400">
+            <span class="text-zinc-500" data-i18n="confirmTargetModel">Model Target:</span>
+            <span id="modal-target-model" class="text-zinc-200 font-semibold truncate max-w-[200px]">-</span>
+          </div>
+          <div class="flex items-center justify-between text-zinc-400">
+            <span class="text-zinc-500" data-i18n="confirmActiveVectors">Vektor Aktif:</span>
+            <span id="modal-vector-count" class="text-cyan-400 font-semibold">-</span>
+          </div>
+          <div class="flex items-center justify-between text-zinc-400">
+            <span class="text-zinc-500" data-i18n="confirmEstTokens">Estimasi Token:</span>
+            <span id="modal-est-tokens" class="text-emerald-400 font-semibold">-</span>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-2 text-[11px] text-amber-400/90 bg-amber-950/20 border border-amber-900/40 p-2.5 rounded-md leading-snug">
+          <i class="fa-solid fa-triangle-exclamation text-amber-400 mt-0.5 shrink-0"></i>
+          <span data-i18n="confirmQuotaNotice">Pastikan API key memiliki kuota aktif. Pengujian ini tidak menyimpan token API di server mana pun.</span>
+        </div>
+      </div>
+
+      <!-- Modal Footer (Tombol Oke / Lanjut di kanan) -->
+      <div class="px-5 py-3.5 border-t border-zinc-800/70 bg-zinc-950/60 flex items-center justify-end gap-2.5">
+        <button id="btn-modal-cancel" type="button" class="px-3.5 py-2 rounded text-xs font-mono font-medium text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/80 border border-zinc-800 transition" data-i18n="confirmBtnCancel">
+          Batal
+        </button>
+        <button id="btn-modal-proceed" type="button" class="px-4 py-2 rounded bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-zinc-950 font-semibold font-mono text-xs tracking-wider uppercase transition flex items-center gap-1.5 shadow-sm" data-i18n="confirmBtnProceed">
+          <i class="fa-solid fa-play text-[10px]"></i>
+          <span>Lanjutkan Scan</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="app.js?v=1.0.4"></script>
 </body>
 </html>
