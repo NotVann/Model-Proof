@@ -180,7 +180,30 @@ const el = {
   statTtft: document.getElementById('stat-ttft'),
   statTps: document.getElementById('stat-tps'),
   statTokenMatch: document.getElementById('stat-token-match'),
-  suiteProgressText: document.getElementById('suite-progress-text')
+  suiteProgressText: document.getElementById('suite-progress-text'),
+  // Layman UI Elements
+  laymanSummaryCard: document.getElementById('layman-summary-card'),
+  laymanStatusBadge: document.getElementById('layman-status-badge'),
+  laymanHeadline: document.getElementById('layman-headline'),
+  laymanSubtext: document.getElementById('layman-subtext'),
+  laymanRiskPill: document.getElementById('layman-risk-pill'),
+  laymanEvidenceContainer: document.getElementById('layman-evidence-container'),
+  laymanEvidenceList: document.getElementById('layman-evidence-list'),
+  laymanActionBar: document.getElementById('layman-action-bar'),
+  btnCopyComplaint: document.getElementById('btn-copy-complaint'),
+  btnToggleTechDetails: document.getElementById('btn-toggle-tech-details'),
+  techDetailsSection: document.getElementById('tech-details-section'),
+  techDetailsBtnLabel: document.getElementById('tech-details-btn-label'),
+  techDetailsChevron: document.getElementById('tech-details-chevron')
+};
+
+// Global Audit State Tracker for Layman Findings
+const auditState = {
+  flaggedCatalogModels: [],
+  sellerTenant: null,
+  findings: [], // Array of { category: 'identity'|'tokens'|'logic'|'temporal'|'catalog', text: string, severity: 'critical'|'warning' }
+  identifiedEntities: [],
+  lastVerdict: null
 };
 
 // Auto-Protocol Detection Handshake Engine
@@ -604,6 +627,9 @@ async function fetchAvailableModels() {
       }
     });
 
+    auditState.flaggedCatalogModels = flagged;
+    if (customOwners.size > 0) auditState.sellerTenant = Array.from(customOwners).join(', ');
+
     // Populate Dropdown
     el.claimedModelSelect.innerHTML = '';
     models.forEach(m => {
@@ -830,6 +856,190 @@ function updateTestRow(testId, status, detailText = null) {
 }
 
 // ----------------------------------------------------
+// FORENSIC REASONING & LAYMAN EVIDENCE ENGINE
+// ----------------------------------------------------
+
+// Model Family Categorization Hierarchy
+function getModelFamily(modelId = '') {
+  const m = modelId.toLowerCase();
+  if (m.includes('claude')) return { family: 'Anthropic Claude', vendor: 'Anthropic', flagName: 'Claude' };
+  if (m.includes('gpt-4o') || m.includes('4o')) return { family: 'OpenAI GPT-4o', vendor: 'OpenAI', flagName: 'GPT-4o' };
+  if (m.includes('o1') || m.includes('o3')) return { family: 'OpenAI o-Series', vendor: 'OpenAI', flagName: 'o1/o3 Reasoning' };
+  if (m.includes('gpt-4')) return { family: 'OpenAI GPT-4', vendor: 'OpenAI', flagName: 'GPT-4' };
+  if (m.includes('deepseek')) return { family: 'DeepSeek', vendor: 'DeepSeek', flagName: 'DeepSeek' };
+  if (m.includes('llama') || m.includes('meta')) return { family: 'Meta Llama', vendor: 'Meta', flagName: 'Llama' };
+  if (m.includes('gemini')) return { family: 'Google Gemini', vendor: 'Google', flagName: 'Gemini' };
+  if (m.includes('qwen')) return { family: 'Alibaba Qwen', vendor: 'Alibaba', flagName: 'Qwen' };
+  if (m.includes('mistral')) return { family: 'Mistral AI', vendor: 'Mistral', flagName: 'Mistral' };
+  return { family: 'Standard Model', vendor: 'Vendor', flagName: modelId };
+}
+
+// Dynamic Entity & Identity Extractor
+function extractIdentityEntity(text = '') {
+  if (!text) return null;
+  
+  // Patterns like "I am Kiro", "I'm Kiro", "saya adalah Kiro", "saya Kiro", "name is Kiro", "as an AI created by X"
+  const patterns = [
+    /(?:i am|i'm|saya|nama saya|aku)\s+([A-Z][a-zA-Z0-9_\-\.]{2,20})/i,
+    /(?:name is|called)\s+([A-Z][a-zA-Z0-9_\-\.]{2,20})/i,
+    /(?:created by|trained by|developed by|buatan)\s+([A-Z][a-zA-Z0-9_\-\. ]{2,30})/i,
+    /(?:sisa token|kuota token|token balance|arza|kiro)/i
+  ];
+
+  for (const regex of patterns) {
+    const match = text.match(regex);
+    if (match) {
+      return match[1] || match[0];
+    }
+  }
+  return null;
+}
+
+// Render Plain-Language Executive Summary for Layman Users
+function renderLaymanSummary(scorePercentage, results) {
+  const familyInfo = getModelFamily(state.claimedModel);
+  const findings = auditState.findings || [];
+  
+  // Also collect catalog findings if any
+  if (auditState.flaggedCatalogModels.length > 0) {
+    const fakeNames = auditState.flaggedCatalogModels.map(f => f.id).join(', ');
+    findings.push({
+      category: 'catalog',
+      severity: 'critical',
+      headline: 'Katalog API Penjual Memuat Model Palsu/Fiktif',
+      desc: `Daftar model upstream memuat model fiktif yang tidak pernah dirilis resmi: [${fakeNames}]. Ini indikasi kuat reseller memanipulasi penamaan.`
+    });
+  }
+
+  // Deduplicate findings by headline
+  const uniqueFindings = [];
+  const seenHeadlines = new Set();
+  findings.forEach(f => {
+    if (!seenHeadlines.has(f.headline)) {
+      seenHeadlines.add(f.headline);
+      uniqueFindings.push(f);
+    }
+  });
+
+  // Calculate Verdict Level
+  let verdictLevel = 'fake'; // 'fake' | 'suspicious' | 'genuine'
+  if (scorePercentage >= 80 && uniqueFindings.filter(f => f.severity === 'critical').length === 0) {
+    verdictLevel = 'genuine';
+  } else if (scorePercentage >= 50 && uniqueFindings.filter(f => f.severity === 'critical').length === 0) {
+    verdictLevel = 'suspicious';
+  } else {
+    verdictLevel = 'fake';
+  }
+
+  auditState.lastVerdict = {
+    verdictLevel,
+    scorePercentage,
+    claimedModel: state.claimedModel,
+    familyInfo,
+    findings: uniqueFindings,
+    baseUrl: state.baseUrl
+  };
+
+  // Render UI Components
+  if (verdictLevel === 'genuine') {
+    el.laymanSummaryCard.className = 'panel rounded-lg p-4 space-y-3.5 border-l-4 border-l-emerald-500 transition-all duration-300 bg-emerald-950/10';
+    el.laymanStatusBadge.className = 'font-mono text-xs font-bold px-2.5 py-0.5 rounded uppercase tracking-wider bg-emerald-950 text-emerald-300 border border-emerald-800';
+    el.laymanStatusBadge.textContent = 'TERVERIFIKASI ASLI (GENUINE)';
+    el.laymanHeadline.textContent = `Model Sesuai Spesifikasi Resmi ${familyInfo.family}`;
+    el.laymanHeadline.className = 'text-sm sm:text-base font-semibold text-emerald-300 leading-snug';
+    el.laymanSubtext.textContent = `Hasil pengujian menunjukkan arsitektur internal, tokenizer BPE, logika spasial, dan basis data pengetahuan konsisten dengan model resmi ${familyInfo.flagName}.`;
+    el.laymanRiskPill.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-300 border border-emerald-700 uppercase font-semibold';
+    el.laymanRiskPill.textContent = 'RISIKO: AMAN';
+    el.btnCopyComplaint.classList.add('hidden');
+  } else if (verdictLevel === 'suspicious') {
+    el.laymanSummaryCard.className = 'panel rounded-lg p-4 space-y-3.5 border-l-4 border-l-amber-500 transition-all duration-300 bg-amber-950/10';
+    el.laymanStatusBadge.className = 'font-mono text-xs font-bold px-2.5 py-0.5 rounded uppercase tracking-wider bg-amber-950 text-amber-300 border border-amber-800';
+    el.laymanStatusBadge.textContent = 'MENCURIGAKAN / DOWNGRADED';
+    el.laymanHeadline.textContent = `Diduga Menggunakan Model Versi Mini / Murah`;
+    el.laymanHeadline.className = 'text-sm sm:text-base font-semibold text-amber-300 leading-snug';
+    el.laymanSubtext.textContent = `Model merespons request, namun kecepatan eksekusi atau akurasi logika mengindikasikan downgrade ke model lebih murah/kecil.`;
+    el.laymanRiskPill.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-amber-900/60 text-amber-300 border border-amber-700 uppercase font-semibold';
+    el.laymanRiskPill.textContent = 'RISIKO: SEDANG';
+    el.btnCopyComplaint.classList.remove('hidden');
+  } else {
+    // FAKE / MASKED
+    el.laymanSummaryCard.className = 'panel rounded-lg p-4 space-y-3.5 border-l-4 border-l-rose-500 transition-all duration-300 bg-rose-950/15';
+    el.laymanStatusBadge.className = 'font-mono text-xs font-bold px-2.5 py-0.5 rounded uppercase tracking-wider bg-rose-950 text-rose-300 border border-rose-800';
+    el.laymanStatusBadge.textContent = 'PALSU / HASIL MASKING (SPOOFED)';
+    el.laymanHeadline.textContent = `Model Ini BUKAN ${familyInfo.flagName} Asli!`;
+    el.laymanHeadline.className = 'text-sm sm:text-base font-semibold text-rose-300 leading-snug';
+    el.laymanSubtext.textContent = `Ditemukan ketidakcocokan identitas dan rekayasa proxy. Penjual membungkus model murah/lain menggunakan label nama ${state.claimedModel}.`;
+    el.laymanRiskPill.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-rose-900/70 text-rose-200 border border-rose-700 uppercase font-semibold';
+    el.laymanRiskPill.textContent = 'RISIKO: PENIPUAN (FAKED)';
+    el.btnCopyComplaint.classList.remove('hidden');
+  }
+
+  // Populate Evidence List
+  if (uniqueFindings.length > 0) {
+    el.laymanEvidenceContainer.classList.remove('hidden');
+    el.laymanEvidenceList.innerHTML = '';
+    
+    uniqueFindings.forEach(f => {
+      const item = document.createElement('div');
+      const isCrit = f.severity === 'critical';
+      const borderClass = isCrit ? 'border-rose-900/60 bg-rose-950/30 text-rose-200' : 'border-amber-900/60 bg-amber-950/20 text-amber-200';
+      const icon = isCrit 
+        ? '<i class="fa-solid fa-triangle-exclamation text-rose-400 shrink-0 mt-0.5"></i>' 
+        : '<i class="fa-solid fa-circle-exclamation text-amber-400 shrink-0 mt-0.5"></i>';
+
+      item.className = `p-2.5 rounded border ${borderClass} flex items-start gap-2.5 leading-snug`;
+      item.innerHTML = `
+        ${icon}
+        <div class="space-y-0.5 flex-1">
+          <div class="font-semibold text-xs text-zinc-100">${f.headline}</div>
+          <div class="text-[11px] text-zinc-400 font-sans leading-relaxed">${f.desc}</div>
+        </div>
+      `;
+      el.laymanEvidenceList.appendChild(item);
+    });
+  } else {
+    el.laymanEvidenceContainer.classList.add('hidden');
+  }
+
+  // Update Technical Drawer Toggle Label
+  el.techDetailsBtnLabel.textContent = `Tampilkan Detail Teknis (${results.length})`;
+}
+
+// 1-Click Copy Complaint / Refund Draft for Layman
+function copyComplaintDraft() {
+  if (!auditState.lastVerdict) return;
+  const v = auditState.lastVerdict;
+  const timestamp = new Date().toLocaleString('id-ID');
+  
+  let evidenceBullets = '';
+  if (v.findings.length > 0) {
+    evidenceBullets = v.findings.map((f, i) => `${i + 1}. [${f.headline}]\n   Detail: ${f.desc}`).join('\n\n');
+  } else {
+    evidenceBullets = `- Skor kecocokan arsitektur hanya ${v.scorePercentage}% (Gagal uji integritas model).`;
+  }
+
+  const complaintText = `Halo admin, mohon maaf mau komplain perihal API Key yang saya beli.
+
+Setelah saya lakukan audit forensik teknis menggunakan AI Model Mask Checker pada:
+- Waktu Audit: ${timestamp}
+- Base URL: ${v.baseUrl || 'Endpoint penjual'}
+- Model yang dibeli/dites: ${v.claimedModel}
+- Status Hasil Audit: ${v.verdictLevel.toUpperCase()} (Skor Keaslian: ${v.scorePercentage}%)
+
+Berikut bukti temuan forensik bahwa model ini di-masking / tidak sesuai dengan model aslinya:
+
+${evidenceBullets}
+
+Berdasarkan bukti di atas, model yang disediakan di proxy ini bukan ${v.familyInfo.family} original. Mohon untuk diganti dengan endpoint resmi yang valid atau proses refund dana saya ya. Terima kasih!`;
+
+  navigator.clipboard.writeText(complaintText).then(() => {
+    showToast('Draft komplain berhasil disalin ke clipboard!', 'success');
+  }).catch(err => {
+    showToast('Gagal menyalin draft: ' + err.message, 'error');
+  });
+}
+
+// ----------------------------------------------------
 // 10 TEST VECTOR IMPLEMENTATIONS
 // ----------------------------------------------------
 
@@ -844,17 +1054,43 @@ async function runTest1() {
 Respond strictly in JSON: {"r_count": <number>, "reversed": "<string>", "math": <number>}`;
 
   const res = await callModel({ messages: [{ role: 'user', content: prompt }] });
+  
+  // Extract potential entity leaks from raw response
+  const entity = extractIdentityEntity(res.content);
+  if (entity) {
+    auditState.findings.push({
+      category: 'identity',
+      severity: 'critical',
+      headline: `Bot Mengaku Sebagai '${entity}'`,
+      desc: `Pada tes logika, bot secara spontan merespons dengan identitas '${entity}'. Model resmi ${state.claimedModel} tidak pernah merespons dengan nama ini.`
+    });
+  }
+
   try {
     const match = res.content.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error('No JSON found');
+    if (!match) throw new Error('No JSON found in response');
     const parsed = JSON.parse(match[0]);
     if (parsed.r_count === 3 && parsed.reversed?.replace(/[^a-z]/g, '') === 'yrrebwarts' && parsed.math === 406) {
       updateTestRow(1, 'PASSED', 'Passed (r=3, math=406).');
       return { score: 1.0 };
     }
+    
+    auditState.findings.push({
+      category: 'logic',
+      severity: 'warning',
+      headline: 'Akurasi Penalaran Karakter Gagal',
+      desc: `Model menghitung jumlah huruf 'r' keliru (dihasilkan: ${parsed.r_count}, seharusnya: 3). Model tier flagship (Claude Sonnet/GPT-4o) selalu menjawab 3 dengan benar.`
+    });
+
     updateTestRow(1, 'FAILED', `Logic error: r=${parsed.r_count} (expected 3). Mini/Llama downgrade.`);
     return { score: 0.0 };
   } catch (err) {
+    auditState.findings.push({
+      category: 'logic',
+      severity: 'critical',
+      headline: 'Gagal Mematuhi Format Respon JSON',
+      desc: `Model gagal menghasilkan format JSON murni: ${err.message}. Model kemungkinan tier rendah atau terganggu injected prompt dari proxy penjual.`
+    });
     updateTestRow(1, 'FAILED', `Parse error: ${err.message}`);
     return { score: 0.0 };
   }
@@ -868,16 +1104,52 @@ async function runTest2() {
   const res = await callModel({ messages: [{ role: 'user', content: bpeSequence }], maxTokens: 5 });
   const tokens = res.usage?.prompt_tokens;
 
-  if (!tokens) {
+  // Check identity leaks in content
+  const entity = extractIdentityEntity(res.content);
+  if (entity) {
+    auditState.findings.push({
+      category: 'identity',
+      severity: 'critical',
+      headline: `Bot Terdeteksi Bernama '${entity}'`,
+      desc: `Respon output membocorkan identitas bot/proxy '${entity}'.`
+    });
+  }
+
+  if (tokens === undefined || tokens === null) {
     updateTestRow(2, 'WARNING', 'Usage prompt_tokens stripped by upstream proxy.');
     el.statTokenMatch.textContent = 'Stripped';
+    auditState.findings.push({
+      category: 'tokens',
+      severity: 'warning',
+      headline: 'Metrik Token Dihapus oleh Proxy Penjual',
+      desc: 'Proxy upstream menghapus data pemakaian token (prompt_tokens = null) untuk menyembunyikan tokenizer asli model.'
+    });
     return { score: 0.5 };
+  }
+
+  // Arzastore / reseller token manipulation check
+  if (tokens === 0) {
+    updateTestRow(2, 'FAILED', 'Manipulated prompt_tokens (reported 0). Upstream proxy fabrication.');
+    el.statTokenMatch.textContent = '0 tk (Fake)';
+    auditState.findings.push({
+      category: 'tokens',
+      severity: 'critical',
+      headline: 'Metrik Token Dimanipulasi Menjadi 0',
+      desc: 'Proxy penjual memalsukan nilai token input menjadi 0. Model AI asli dari OpenAI/Anthropic selalu menghitung token input dengan akurat.'
+    });
+    return { score: 0.0 };
   }
 
   el.statTokenMatch.textContent = `${tokens} tk`;
   const isGpt4o = state.claimedModel.includes('4o');
   if (isGpt4o && (tokens > 55 || tokens < 25)) {
     updateTestRow(2, 'WARNING', `Anomalous token count (${tokens}). Tokenizer mismatch with o200k.`);
+    auditState.findings.push({
+      category: 'tokens',
+      severity: 'warning',
+      headline: 'Tokenizer Berbeda dari Standar Resmi GPT-4o',
+      desc: `Jumlah token (${tokens}) tidak sesuai dengan kamus BPE o200k resmi OpenAI. Mengindikasikan request diarahkan ke arsitektur lain.`
+    });
     return { score: 0.3 };
   }
 
@@ -900,17 +1172,43 @@ Format strictly: CREATOR: <Name> | ARCHITECTURE: <Name>`;
     ]
   });
 
-  const low = res.content.toLowerCase();
+  const raw = res.content;
+  const low = raw.toLowerCase();
   const claimed = state.claimedModel.toLowerCase();
   let passed = true;
   let note = 'Identity consistent with target vendor.';
 
-  if (claimed.includes('claude') && (low.includes('openai') || low.includes('meta') || low.includes('deepseek'))) {
+  // Check for dynamic entity greeting (e.g. Kiro, Arza, etc.)
+  const entity = extractIdentityEntity(raw);
+  if (entity) {
+    passed = false;
+    note = `CRITICAL: Model identified itself as '${entity}'!`;
+    auditState.findings.push({
+      category: 'identity',
+      severity: 'critical',
+      headline: `Model Mengaku Bernama '${entity}'`,
+      desc: `Saat ditanya identitas dasarnya, bot menjawab sebagai '${entity}' bukannya model resmi ${state.claimedModel}.`
+    });
+  }
+
+  if (claimed.includes('claude') && (low.includes('openai') || low.includes('meta') || low.includes('deepseek') || low.includes('llama'))) {
     passed = false;
     note = 'CRITICAL: Claimed Claude, model confessed non-Anthropic base!';
-  } else if ((claimed.includes('gpt') || claimed.includes('o1')) && (low.includes('anthropic') || low.includes('meta') || low.includes('deepseek'))) {
+    auditState.findings.push({
+      category: 'identity',
+      severity: 'critical',
+      headline: 'Model Mengaku Berbasis Arsitektur Kompetitor',
+      desc: `Model yang Anda beli diklaim Claude (Anthropic), namun sistem internal model mengaku dibuat oleh OpenAI/Meta/DeepSeek.`
+    });
+  } else if ((claimed.includes('gpt') || claimed.includes('o1')) && (low.includes('anthropic') || low.includes('meta') || low.includes('deepseek') || low.includes('claude'))) {
     passed = false;
     note = 'CRITICAL: Claimed OpenAI, model confessed competitor base!';
+    auditState.findings.push({
+      category: 'identity',
+      severity: 'critical',
+      headline: 'Model Mengaku Berbasis Arsitektur Kompetitor',
+      desc: `Model yang Anda beli diklaim OpenAI (GPT), namun sistem internal model mengaku dibuat oleh Anthropic/Meta/DeepSeek.`
+    });
   }
 
   updateTestRow(3, passed ? 'PASSED' : 'FAILED', note);
@@ -964,6 +1262,12 @@ async function runTest4() {
 
     if (state.claimedModel.includes('claude') && tps > 210) {
       updateTestRow(4, 'WARNING', `Abnormal speed (${tps} TPS). Claude Sonnet runs ~50-80 TPS. Possible Groq spoof.`);
+      auditState.findings.push({
+        category: 'hardware',
+        severity: 'warning',
+        headline: `Kecepatan Generasi Mencurigakan (${tps} TPS)`,
+        desc: `Claude Sonnet resmi biasanya menghasilkan ~50-80 token/detik. Kecepatan >210 TPS mengindikasikan model kecil (Llama 8B) yang di-host di chip LPU (Groq/Cerebras).`
+      });
       return { score: 0.3 };
     }
 
@@ -996,6 +1300,14 @@ NEGATIVE RULES:
     updateTestRow(5, 'PASSED', 'Followed all negative constraints without filler.');
     return { score: 1.0 };
   }
+  
+  auditState.findings.push({
+    category: 'compliance',
+    severity: 'warning',
+    headline: 'Gagal Mematuhi Aturan Negatif (System Instruction)',
+    desc: 'Model membocorkan kata-kata obrolan pembuka (basa-basi) atau format markdown meskipun diinstruksikan tegas untuk menghindarinya.'
+  });
+
   updateTestRow(5, 'FAILED', 'Failed negative constraints (leaked filler or markdown).');
   return { score: 0.0 };
 }
@@ -1036,6 +1348,12 @@ async function runTest6() {
     updateTestRow(6, 'PASSED', 'Passed strict grammar-engine constrained decoding.');
     return { score: 1.0 };
   } catch (err) {
+    auditState.findings.push({
+      category: 'compliance',
+      severity: 'warning',
+      headline: 'Tidak Mendukung JSON Schema Strict Sampling',
+      desc: `Proxy penjual gagal mengeksekusi parameter JSON schema native (${err.message}). Mesin proxy tidak memiliki fitur constrained grammar decoding.`
+    });
     updateTestRow(6, 'FAILED', `Grammar failure: ${err.message}. Proxy lacks native constrained sampling.`);
     return { score: 0.0 };
   }
@@ -1070,6 +1388,14 @@ async function runTest8() {
     updateTestRow(8, 'PASSED', 'Cutoff verified fresh (recognized Oct 2024 Nobel Prize).');
     return { score: 1.0 };
   }
+
+  auditState.findings.push({
+    category: 'temporal',
+    severity: 'warning',
+    headline: 'Batas Pengetahuan Usang (Knowledge Cutoff Kadaluarsa)',
+    desc: 'Model tidak mengenali peristiwa Nobel Fisika Oktober 2024 (Hopfield & Hinton). Model yang digunakan adalah model lawas (cutoff 2023 atau awal 2024).'
+  });
+
   updateTestRow(8, 'FAILED', 'Cutoff test failed. Base model has stale cutoff (2023 or mid-2024).');
   return { score: 0.0 };
 }
@@ -1085,6 +1411,12 @@ async function runTest9() {
 
   // If claimed o1, but output has raw <think> tags → It's DeepSeek-R1 spoofed as o1
   if (isO1 && raw.includes('<think>')) {
+    auditState.findings.push({
+      category: 'identity',
+      severity: 'critical',
+      headline: 'Bocoran Delimiter <think> (DeepSeek-R1 Spoofing)',
+      desc: 'Model diklaim sebagai OpenAI o1/o3, namun output membocorkan tag <think> khas DeepSeek-R1. Model 100% dipalsukan!'
+    });
     updateTestRow(9, 'FAILED', 'SPOOF DETECTED: Claimed o1, but returned DeepSeek-R1 <think> block!');
     return { score: 0.0 };
   }
@@ -1093,6 +1425,14 @@ async function runTest9() {
     updateTestRow(9, 'PASSED', 'Passed reasoning logic without delimiter leak.');
     return { score: 1.0 };
   }
+
+  auditState.findings.push({
+    category: 'logic',
+    severity: 'warning',
+    headline: 'Gagal Soal Penalaran Matematika Reflektif',
+    desc: 'Model gagal menghitung puzzle klasik bat & ball ($0.05). Model tidak memiliki kemampuan reasoning reflektif.'
+  });
+
   updateTestRow(9, 'FAILED', 'Reasoning failure on classic reflection puzzle.');
   return { score: 0.0 };
 }
@@ -1112,6 +1452,14 @@ Respond strictly in 2 bullet points.`;
     updateTestRow(10, 'PASSED', 'High-order Rust compile-time memory lifetime logic solved.');
     return { score: 1.0 };
   }
+
+  auditState.findings.push({
+    category: 'logic',
+    severity: 'warning',
+    headline: 'Gagal Analisis Rust Lifetime / HRTB',
+    desc: 'Model tidak memahami konsep memori tingkat tinggi (Rust Higher-Rank Trait Bounds). Indikasi kuat model kecil yang minim pemahaman sintaks mendalam.'
+  });
+
   updateTestRow(10, 'FAILED', 'Failed type-level borrow checker puzzle. Mini model detected.');
   return { score: 0.0 };
 }
@@ -1132,6 +1480,7 @@ async function startAudit() {
   }
 
   state.isRunning = true;
+  auditState.findings = []; // Reset findings for clean audit run
   el.btnStartAudit.disabled = true;
   el.btnStartAudit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Running Audit...';
 
@@ -1141,6 +1490,16 @@ async function startAudit() {
   el.verdictBadge.textContent = 'AUDITING';
   el.verdictBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 uppercase inline-block';
   el.auditTargetDisplay.textContent = `${state.claimedModel} @ ${state.baseUrl || 'Default'}`;
+
+  // Reset Layman UI
+  el.laymanSummaryCard.className = 'panel rounded-lg p-4 space-y-3.5 border-l-4 border-l-cyan-600 transition-all duration-300';
+  el.laymanStatusBadge.className = 'font-mono text-xs font-bold px-2.5 py-0.5 rounded uppercase tracking-wider bg-cyan-950 text-cyan-300 border border-cyan-800';
+  el.laymanStatusBadge.textContent = 'SEDANG MEMERIKSA...';
+  el.laymanHeadline.textContent = `Memeriksa Sidik Jari Model ${state.claimedModel}...`;
+  el.laymanSubtext.textContent = 'Mengirim rangkaian tes logika, identitas, tokenizer, dan arsitektur untuk memvalidasi keaslian model...';
+  el.laymanRiskPill.textContent = 'STATUS: AUDITING';
+  el.laymanEvidenceContainer.classList.add('hidden');
+  el.btnCopyComplaint.classList.add('hidden');
 
   appendLog(`=== Starting Modular Audit: ${state.selectedTests.length} Vectors on [${state.claimedModel}] ===`, 'highlight');
 
@@ -1183,14 +1542,35 @@ async function startAudit() {
       showToast(`Critical: Severe fingerprint mismatches (${percentage}%). Model confirmed spoofed.`, 'error');
     }
 
+    // Render Plain-Language Executive Summary for Layman Users
+    renderLaymanSummary(percentage, testResults);
+
   } catch (err) {
     appendLog(`Audit interrupted: ${err.message}`, 'error');
     showToast(`Audit failed: ${err.message}`, 'error');
   } finally {
     state.isRunning = false;
     el.btnStartAudit.disabled = false;
-    el.btnStartAudit.innerHTML = '<i class="fa-solid fa-play"></i> Run Selected Tests';
+    el.btnStartAudit.innerHTML = '<i class="fa-solid fa-play"></i> Launch Forensic Scan';
   }
+}
+
+// Layman Button Listeners
+if (el.btnCopyComplaint) {
+  el.btnCopyComplaint.addEventListener('click', copyComplaintDraft);
+}
+
+if (el.btnToggleTechDetails) {
+  el.btnToggleTechDetails.addEventListener('click', () => {
+    const isHidden = el.techDetailsSection.classList.contains('hidden');
+    if (isHidden) {
+      el.techDetailsSection.classList.remove('hidden');
+      el.techDetailsChevron.classList.add('rotate-180');
+    } else {
+      el.techDetailsSection.classList.add('hidden');
+      el.techDetailsChevron.classList.remove('rotate-180');
+    }
+  });
 }
 
 el.btnStartAudit.addEventListener('click', startAudit);
