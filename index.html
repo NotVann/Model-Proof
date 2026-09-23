@@ -118,14 +118,22 @@
           <span class="text-[10px] font-mono text-zinc-500">Zero-Persistence</span>
         </div>
 
-        <!-- Protocol Switcher -->
-        <div class="grid grid-cols-2 gap-2 text-xs font-mono">
-          <button id="proto-openai" class="py-2 px-3 rounded border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 font-medium transition flex items-center justify-center gap-2">
-            <i class="fa-solid fa-bolt text-[11px]"></i> OpenAI Standard
-          </button>
-          <button id="proto-anthropic" class="py-2 px-3 rounded border border-zinc-800 bg-zinc-900/60 text-zinc-400 hover:text-zinc-200 transition flex items-center justify-center gap-2">
-            <i class="fa-solid fa-cube text-[11px]"></i> Anthropic Messages
-          </button>
+        <!-- Protocol Segmented Radio Switcher -->
+        <div class="space-y-1.5">
+          <label class="text-zinc-400 font-medium text-xs flex items-center justify-between">
+            <span>Protocol Interface</span>
+            <span class="text-[10px] font-mono text-zinc-500">Select API schema</span>
+          </label>
+          <div class="grid grid-cols-2 p-1 bg-zinc-950 rounded-lg border border-zinc-800/80 text-xs font-mono gap-1">
+            <button id="proto-openai" type="button" class="py-1.5 px-3 rounded-md transition-all flex items-center justify-center gap-2 font-medium bg-zinc-850 text-zinc-100 border border-zinc-700/80 shadow-sm">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+              <span>OpenAI</span>
+            </button>
+            <button id="proto-anthropic" type="button" class="py-1.5 px-3 rounded-md transition-all flex items-center justify-center gap-2 font-medium text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/40">
+              <span class="w-1.5 h-1.5 rounded-full bg-zinc-600"></span>
+              <span>Anthropic</span>
+            </button>
+          </div>
         </div>
 
         <!-- Base URL -->

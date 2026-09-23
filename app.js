@@ -117,19 +117,30 @@ const el = {
   suiteProgressText: document.getElementById('suite-progress-text')
 };
 
-// Render Checkboxes with Refined Design
+// Render Checkboxes with Custom Bespoke SVG Checkmarks
 function renderTestCheckboxes() {
   el.testCheckboxesContainer.innerHTML = '';
   TEST_REGISTRY.forEach(t => {
     const isChecked = state.selectedTests.includes(t.id);
     const item = document.createElement('label');
-    item.className = 'flex items-start gap-2.5 p-2 rounded bg-zinc-950/50 border border-zinc-800/60 hover:border-zinc-700/80 cursor-pointer transition';
+    const checkedBorderClass = isChecked ? 'border-emerald-500/30 bg-emerald-950/10' : 'border-zinc-800/60 bg-zinc-950/40';
+    item.className = `group flex items-start gap-3 p-2.5 rounded-md border ${checkedBorderClass} hover:border-zinc-700 cursor-pointer transition-all duration-150 select-none test-card-${t.id}`;
+    
     item.innerHTML = `
-      <input type="checkbox" value="${t.id}" ${isChecked ? 'checked' : ''} class="test-checkbox mt-0.5 rounded-sm bg-zinc-900 border-zinc-700 text-emerald-500 focus:ring-0 focus:ring-offset-0 cursor-pointer">
-      <div class="space-y-0.5 flex-1 select-none">
+      <div class="relative flex items-center justify-center mt-0.5">
+        <input type="checkbox" value="${t.id}" ${isChecked ? 'checked' : ''} class="peer sr-only test-checkbox">
+        <div class="w-4 h-4 rounded border border-zinc-700 bg-zinc-900 group-hover:border-zinc-600 peer-checked:bg-emerald-500 peer-checked:border-emerald-400 flex items-center justify-center transition-all shadow-inner">
+          <svg class="w-2.5 h-2.5 text-zinc-950 opacity-0 peer-checked:opacity-100 transition-opacity stroke-[3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+      </div>
+      <div class="space-y-0.5 flex-1">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-mono font-medium text-zinc-300">${String(t.id).padStart(2, '0')}. ${t.name}</span>
-          ${t.quick ? '<span class="text-[9px] px-1.5 py-0.2 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 font-mono">FAST</span>' : '<span class="text-[9px] px-1.5 py-0.2 rounded bg-zinc-900 text-purple-400 border border-purple-900/40 font-mono">DEEP</span>'}
+          <span class="text-xs font-mono font-medium text-zinc-300 group-hover:text-zinc-100 transition-colors">${String(t.id).padStart(2, '0')}. ${t.name}</span>
+          ${t.quick 
+            ? '<span class="text-[9px] px-1.5 py-0.2 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 font-mono">FAST</span>' 
+            : '<span class="text-[9px] px-1.5 py-0.2 rounded bg-purple-950/50 text-purple-300 border border-purple-800/40 font-mono">DEEP</span>'}
         </div>
         <p class="text-[11px] text-zinc-500 font-sans leading-tight">${t.desc}</p>
       </div>
@@ -139,8 +150,10 @@ function renderTestCheckboxes() {
       const id = parseInt(e.target.value);
       if (e.target.checked) {
         if (!state.selectedTests.includes(id)) state.selectedTests.push(id);
+        item.className = item.className.replace('border-zinc-800/60 bg-zinc-950/40', 'border-emerald-500/30 bg-emerald-950/10');
       } else {
         state.selectedTests = state.selectedTests.filter(x => x !== id);
+        item.className = item.className.replace('border-emerald-500/30 bg-emerald-950/10', 'border-zinc-800/60 bg-zinc-950/40');
       }
       state.selectedTests.sort((a, b) => a - b);
       localStorage.setItem('mm_selected_tests', JSON.stringify(state.selectedTests));
@@ -204,14 +217,22 @@ function initUI() {
 
 function updateProtocolUI() {
   if (state.protocol === 'openai') {
-    el.protoOpenai.className = 'py-2 px-3 rounded-lg border border-emerald-500 bg-emerald-500/10 text-emerald-400 transition flex items-center justify-center gap-2';
-    el.protoAnthropic.className = 'py-2 px-3 rounded-lg border border-gray-800 bg-gray-900/50 text-gray-400 hover:border-gray-700 transition flex items-center justify-center gap-2';
+    el.protoOpenai.className = 'py-1.5 px-3 rounded-md transition-all flex items-center justify-center gap-2 font-medium bg-zinc-850 text-zinc-100 border border-zinc-700/80 shadow-sm';
+    el.protoOpenai.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span><span>OpenAI</span>';
+    
+    el.protoAnthropic.className = 'py-1.5 px-3 rounded-md transition-all flex items-center justify-center gap-2 font-medium text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/40 border border-transparent';
+    el.protoAnthropic.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-zinc-600"></span><span>Anthropic</span>';
+
     if (!el.baseUrl.value || el.baseUrl.value.includes('anthropic.com')) {
       el.baseUrl.placeholder = 'https://api.openai.com/v1';
     }
   } else {
-    el.protoAnthropic.className = 'py-2 px-3 rounded-lg border border-emerald-500 bg-emerald-500/10 text-emerald-400 transition flex items-center justify-center gap-2';
-    el.protoOpenai.className = 'py-2 px-3 rounded-lg border border-gray-800 bg-gray-900/50 text-gray-400 hover:border-gray-700 transition flex items-center justify-center gap-2';
+    el.protoAnthropic.className = 'py-1.5 px-3 rounded-md transition-all flex items-center justify-center gap-2 font-medium bg-zinc-850 text-zinc-100 border border-zinc-700/80 shadow-sm';
+    el.protoAnthropic.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span><span>Anthropic</span>';
+
+    el.protoOpenai.className = 'py-1.5 px-3 rounded-md transition-all flex items-center justify-center gap-2 font-medium text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/40 border border-transparent';
+    el.protoOpenai.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-zinc-600"></span><span>OpenAI</span>';
+
     if (!el.baseUrl.value || el.baseUrl.value.includes('openai.com')) {
       el.baseUrl.placeholder = 'https://api.anthropic.com/v1';
     }
