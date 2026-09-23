@@ -141,6 +141,9 @@ function detectOriginalVendor(modelId = '') {
   if (m.includes('baichuan')) {
     return { name: 'Baichuan', family: 'Baichuan' };
   }
+  if (m.includes('atria')) {
+    return { name: 'Shanghai AI Lab', family: 'Shanghai AI Lab Atria' };
+  }
   if (m.includes('titan') || m.includes('nova')) {
     return { name: 'Amazon AWS', family: 'Amazon Bedrock' };
   }
@@ -650,27 +653,22 @@ async function main() {
     }
   }
 
-  const capabilityScore = Math.round((totalScore / VECTORS.length) * 100);
+  const scorePercentage = Math.round((totalScore / VECTORS.length) * 100);
   const origVendor = detectOriginalVendor(opts.model);
   const targetFake = checkFakeModelPattern(opts.model);
-  const hasFakeCatalog = catalogResult.flagged.length > 0;
 
-  let verdictLevel = 'fake';
-  let exitCode = 1;
-  let authenticityScore = capabilityScore;
+  let verdictLevel = 'genuine';
+  let exitCode = 0;
 
-  if (targetFake || hasCriticalFailure || (hasFakeCatalog && capabilityScore < 85)) {
-    verdictLevel = 'fake';
-    authenticityScore = Math.min(30, Math.max(0, capabilityScore - (targetFake ? 70 : 40) - (hasCriticalFailure ? 50 : 0)));
-    exitCode = 1;
-  } else if (hasFakeCatalog || capabilityScore < 80) {
+  if (scorePercentage >= 80) {
+    verdictLevel = 'genuine';
+    exitCode = 0;
+  } else if (scorePercentage >= 50) {
     verdictLevel = 'suspicious';
-    authenticityScore = Math.min(65, Math.max(0, capabilityScore - 25));
     exitCode = 1;
   } else {
-    verdictLevel = 'genuine';
-    authenticityScore = capabilityScore;
-    exitCode = 0;
+    verdictLevel = 'fake';
+    exitCode = 1;
   }
 
   if (opts.json) {
@@ -680,12 +678,10 @@ async function main() {
         model: opts.model,
         baseUrl: opts.baseUrl,
         detectedOriginalVendor: origVendor.name,
-        isFictionalModel: Boolean(targetFake)
+        isCustomModelName: Boolean(targetFake)
       },
       audit: {
-        score: authenticityScore,
-        authenticityScore,
-        capabilityScore,
+        score: scorePercentage,
         verdict: verdictLevel.toUpperCase(),
         hasCriticalFailure,
         catalog: catalogResult,
@@ -710,16 +706,16 @@ async function main() {
     riskText = isEn ? 'MEDIUM' : 'SEDANG';
   } else if (verdictLevel === 'fake') {
     verdictColor = c.red;
-    verdictText = isEn ? 'CONFIRMED SPOOFED / MASKED' : 'PALSU / HASIL MASKING (SPOOFED)';
-    riskText = isEn ? 'FRAUD / FAKED' : 'PENIPUAN (FAKED)';
+    verdictText = isEn ? 'FAILED / MASKED' : 'GAGAL UJI / MASKING (SPOOFED)';
+    riskText = isEn ? 'HIGH / FAKED' : 'TINGGI / PENIPUAN';
   }
 
-  console.log(` ${isEn ? 'AUTHENTICITY SCORE' : 'SKOR KEASLIAN'}   : ${c.bold}${verdictColor}${authenticityScore}%${c.reset}`);
-  if (authenticityScore !== capabilityScore) {
-    console.log(` ${isEn ? 'CAPABILITY SCORE' : 'KEMAMPUAN TEKNIS'}  : ${c.bold}${capabilityScore}%${c.reset} ${c.dim}(${isEn ? 'Underlying Model Passed Vectors' : 'Model di balik proxy lolos uji'})`);
-  }
+  console.log(` ${isEn ? 'FORENSIC TEST SCORE' : 'SKOR HASIL UJI'}  : ${c.bold}${verdictColor}${scorePercentage}%${c.reset}`);
   console.log(` ${isEn ? 'VERDICT' : 'HASIL DIAGNOSTIK'}   : ${c.bold}${verdictColor}${verdictText}${c.reset}`);
   console.log(` ${isEn ? 'DETECTED VENDOR' : 'VENDOR ASLI'}    : ${origVendor.family}`);
+  if (targetFake) {
+    console.log(` ${isEn ? 'MODEL IDENTIFIER' : 'IDENTITAS MODEL'} : ${c.yellow}${opts.model} (${targetFake.reason})${c.reset}`);
+  }
   if (catalogResult.tenant) {
     console.log(` ${isEn ? 'UPSTREAM TENANT' : 'TENANT RESELLER'} : ${c.yellow}${catalogResult.tenant}${c.reset}`);
   }

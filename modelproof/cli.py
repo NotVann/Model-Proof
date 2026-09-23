@@ -63,6 +63,8 @@ def detect_vendor(model_id: str):
         return {"name": "ByteDance", "family": "ByteDance Doubao"}
     if "baichuan" in m:
         return {"name": "Baichuan", "family": "Baichuan"}
+    if "atria" in m:
+        return {"name": "Shanghai AI Lab", "family": "Shanghai AI Lab Atria"}
     if "titan" in m or "nova" in m:
         return {"name": "Amazon AWS", "family": "Amazon Bedrock"}
     if "dbrx" in m:
@@ -545,28 +547,22 @@ Examples:
             if not args.json:
                 print(f"{C_RED}[FAIL]{C_RESET}  Interrupted: {e}")
 
-    capability_score = round((total_score / len(vectors)) * 100)
+    score_percentage = round((total_score / len(vectors)) * 100)
     vendor = detect_vendor(args.model)
     target_fake = check_fake_pattern(args.model)
-    has_fake_catalog = bool(catalog.get("flagged"))
 
-    verdict = "fake"
-    exit_code = 1
-    authenticity_score = capability_score
+    verdict = "genuine"
+    exit_code = 0
 
-    if target_fake or has_critical or (has_fake_catalog and capability_score < 85):
-        verdict = "fake"
-        crit_penalty = (70 if target_fake else 40) + (50 if has_critical else 0)
-        authenticity_score = min(30, max(0, capability_score - crit_penalty))
-        exit_code = 1
-    elif has_fake_catalog or capability_score < 80:
+    if score_percentage >= 80:
+        verdict = "genuine"
+        exit_code = 0
+    elif score_percentage >= 50:
         verdict = "suspicious"
-        authenticity_score = min(65, max(0, capability_score - 25))
         exit_code = 1
     else:
-        verdict = "genuine"
-        authenticity_score = capability_score
-        exit_code = 0
+        verdict = "fake"
+        exit_code = 1
 
     if args.json:
         report = {
@@ -575,12 +571,10 @@ Examples:
                 "model": args.model,
                 "baseUrl": args.base_url,
                 "detectedOriginalVendor": vendor["name"],
-                "isFictionalModel": bool(target_fake)
+                "isCustomModelName": bool(target_fake)
             },
             "audit": {
-                "score": authenticity_score,
-                "authenticityScore": authenticity_score,
-                "capabilityScore": capability_score,
+                "score": score_percentage,
                 "verdict": verdict.upper(),
                 "hasCriticalFailure": has_critical,
                 "catalog": catalog,
@@ -604,15 +598,14 @@ Examples:
         v_risk = "MEDIUM" if is_en else "SEDANG"
     elif verdict == "fake":
         v_color = C_RED
-        v_text = "CONFIRMED SPOOFED / MASKED" if is_en else "PALSU / HASIL MASKING (SPOOFED)"
-        v_risk = "FRAUD / FAKED" if is_en else "PENIPUAN (FAKED)"
+        v_text = "FAILED / MASKED" if is_en else "GAGAL UJI / MASKING (SPOOFED)"
+        v_risk = "HIGH / FAKED" if is_en else "TINGGI / PENIPUAN"
 
-    print(f" {'AUTHENTICITY SCORE' if is_en else 'SKOR KEASLIAN'}   : {C_BOLD}{v_color}{authenticity_score}%{C_RESET}")
-    if authenticity_score != capability_score:
-        note = "Underlying Model Passed Vectors" if is_en else "Model di balik proxy lolos uji nalar"
-        print(f" {'CAPABILITY SCORE' if is_en else 'KEMAMPUAN TEKNIS'}  : {C_BOLD}{capability_score}%{C_RESET} {C_DIM}({note}){C_RESET}")
+    print(f" {'FORENSIC TEST SCORE' if is_en else 'SKOR HASIL UJI'}  : {C_BOLD}{v_color}{score_percentage}%{C_RESET}")
     print(f" {'VERDICT' if is_en else 'HASIL DIAGNOSTIK'}   : {C_BOLD}{v_color}{v_text}{C_RESET}")
     print(f" {'DETECTED VENDOR' if is_en else 'VENDOR ASLI'}    : {vendor['family']}")
+    if target_fake:
+        print(f" {'MODEL IDENTIFIER' if is_en else 'IDENTITAS MODEL'} : {C_YELLOW}{args.model} ({target_fake['reason']}){C_RESET}")
     if catalog.get("tenant"):
         print(f" {'UPSTREAM TENANT' if is_en else 'TENANT RESELLER'} : {C_YELLOW}{catalog['tenant']}{C_RESET}")
     print(f" {'RISK LEVEL' if is_en else 'TINGKAT RISIKO'}      : {C_BOLD}{v_color}{v_risk}{C_RESET}")
