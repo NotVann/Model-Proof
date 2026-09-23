@@ -309,6 +309,15 @@
           <!-- Populated by JS -->
         </div>
 
+        <!-- Estimated Token Usage Pill -->
+        <div class="flex items-center justify-between text-[11px] font-mono py-1.5 px-2.5 rounded bg-zinc-950/70 border border-zinc-800/80 text-zinc-400">
+          <span class="flex items-center gap-1.5 text-zinc-400">
+            <i class="fa-solid fa-coins text-amber-400/80"></i>
+            <span data-i18n="estTokensLabel">Estimasi Token:</span>
+          </span>
+          <span id="est-token-badge" class="font-semibold text-emerald-400">~1.200 - 2.500 tk</span>
+        </div>
+
         <!-- Primary Action Trigger -->
         <button id="btn-start-audit" class="w-full mt-2 py-2.5 px-4 rounded bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-zinc-950 font-semibold font-mono text-xs tracking-wider uppercase transition flex items-center justify-center gap-2 shadow-sm">
           <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
@@ -330,6 +339,10 @@
                 BELUM DI-SCAN
               </span>
               <span id="verdict-score" class="font-mono text-xs text-zinc-500 font-semibold" data-i18n="scorePlaceholder">0/0 Tes</span>
+              <span id="layman-token-pill" class="font-mono text-[10px] text-zinc-400 px-2 py-0.5 rounded bg-zinc-900/80 border border-zinc-800/80 flex items-center gap-1">
+                <i class="fa-solid fa-coins text-amber-400/80 text-[9px]"></i>
+                <span id="layman-token-text">~1.200 - 2.500 tk</span>
+              </span>
             </div>
             <h3 id="layman-headline" class="text-sm sm:text-base font-semibold text-zinc-200 leading-snug" data-i18n="laymanReadyHeadline">
               Siap menguji keaslian API Key
@@ -379,7 +392,7 @@
             <span data-i18n="hardwareTelemetry">Hardware Telemetry & Token BPE</span>
             <span id="audit-target-display" class="text-[11px] text-zinc-500 break-all">-</span>
           </div>
-          <div class="grid grid-cols-3 gap-2 sm:gap-3 font-mono">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 font-mono">
             <div class="bg-zinc-950/70 p-2 sm:p-2.5 rounded border border-zinc-800/60">
               <span class="text-[9px] sm:text-[10px] uppercase text-zinc-500 block" data-i18n="ttftLatency">TTFT Latency</span>
               <span id="stat-ttft" class="text-xs sm:text-sm font-semibold text-zinc-300 mt-0.5 block">- ms</span>
@@ -391,6 +404,10 @@
             <div class="bg-zinc-950/70 p-2 sm:p-2.5 rounded border border-zinc-800/60">
               <span class="text-[9px] sm:text-[10px] uppercase text-zinc-500 block" data-i18n="bpeDelta">BPE Delta</span>
               <span id="stat-token-match" class="text-xs sm:text-sm font-semibold text-zinc-300 mt-0.5 block truncate">-</span>
+            </div>
+            <div class="bg-zinc-950/70 p-2 sm:p-2.5 rounded border border-zinc-800/60">
+              <span class="text-[9px] sm:text-[10px] uppercase text-zinc-500 block" data-i18n="tokensConsumed">Total Tokens</span>
+              <span id="stat-token-consumed" class="text-xs sm:text-sm font-semibold text-emerald-400 mt-0.5 block truncate">- tk</span>
             </div>
           </div>
         </div>

@@ -102,6 +102,7 @@ class ApiClient:
         self.timeout = timeout
         self.active_proto = protocol
         self.ssl_ctx = ssl.create_default_context()
+        self.token_usage = {"prompt": 0, "completion": 0, "total": 0}
 
     def handshake(self, model: str):
         if self.protocol != "auto":
@@ -235,6 +236,16 @@ class ApiClient:
                     "completion_tokens": u.get("output_tokens")
                 }
 
+            # Accumulate token metrics
+            prompt_chars = sum(len(str(m.get("content", ""))) for m in messages)
+            comp_chars = len(content or "")
+            p_tok = int(usage.get("prompt_tokens") or round(prompt_chars / 3.8)) if usage else int(round(prompt_chars / 3.8))
+            c_tok = int(usage.get("completion_tokens") or round(comp_chars / 3.8)) if usage else int(round(comp_chars / 3.8))
+
+            self.token_usage["prompt"] += p_tok
+            self.token_usage["completion"] += c_tok
+            self.token_usage["total"] += (p_tok + c_tok)
+
             return {
                 "content": content or "",
                 "usage": usage,
@@ -334,6 +345,11 @@ def vec4_hardware_tps(client: ApiClient, model: str):
         est_tokens = max(chunks, int(len(full_text.split()) * 1.3))
         stream_duration = max(0.1, total_time - (ttft / 1000.0))
         tps = int(est_tokens / total_time) if chunks <= 2 else int(est_tokens / stream_duration)
+
+        # Accumulate stream tokens
+        client.token_usage["prompt"] += 12
+        client.token_usage["completion"] += est_tokens
+        client.token_usage["total"] += (12 + est_tokens)
 
         if "claude" in model.lower() and tps > 210:
             return {"score": 0.3, "status": "WARN", "note": f"Abnormal speed ({tps} TPS). Possible LPU/Groq spoof."}
@@ -515,8 +531,11 @@ Examples:
         vectors.append({"id": 9, "name": "Reasoning CoT & Delimiter Structure", "fn": vec9_reasoning_cot})
         vectors.append({"id": 10, "name": "Type-Level Memory & Lifetime Logic", "fn": vec10_type_logic})
 
+    est_min = len(vectors) * 120
+    est_max = len(vectors) * 260
+
     if not args.json:
-        print(f"\n[+] {C_BOLD}RUNNING {len(vectors)} FORENSIC VECTORS:{C_RESET}")
+        print(f"\n[+] {C_BOLD}RUNNING {len(vectors)} FORENSIC VECTORS (Est. Tokens: ~{est_min:,} - {est_max:,} tk):{C_RESET}")
         print("--------------------------------------------------------------------------------")
 
     results = []
@@ -577,6 +596,7 @@ Examples:
                 "score": score_percentage,
                 "verdict": verdict.upper(),
                 "hasCriticalFailure": has_critical,
+                "tokens": client.token_usage,
                 "catalog": catalog,
                 "vectors": results
             }
@@ -604,6 +624,7 @@ Examples:
     print(f" {'FORENSIC TEST SCORE' if is_en else 'SKOR HASIL UJI'}  : {C_BOLD}{v_color}{score_percentage}%{C_RESET}")
     print(f" {'VERDICT' if is_en else 'HASIL DIAGNOSTIK'}   : {C_BOLD}{v_color}{v_text}{C_RESET}")
     print(f" {'DETECTED VENDOR' if is_en else 'VENDOR ASLI'}    : {vendor['family']}")
+    print(f" {'TOTAL TOKENS USED' if is_en else 'TOTAL TOKEN DIPAKAI'} : ~{client.token_usage['total']:,} tk (Prompt: ~{client.token_usage['prompt']:,}, Output: ~{client.token_usage['completion']:,})")
     if target_fake:
         print(f" {'MODEL IDENTIFIER' if is_en else 'IDENTITAS MODEL'} : {C_YELLOW}{args.model} ({target_fake['reason']}){C_RESET}")
     if catalog.get("tenant"):

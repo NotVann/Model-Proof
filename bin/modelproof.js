@@ -174,6 +174,8 @@ function checkFakeModelPattern(modelId = '') {
   return null;
 }
 
+const cliMetrics = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+
 // HTTP Caller
 async function callModel(opts, { messages, stream = false, maxTokens = 400, temperature = 0.0, responseFormat = null }) {
   const activeProto = opts.activeProto || 'openai';
@@ -252,6 +254,13 @@ async function callModel(opts, { messages, stream = false, maxTokens = 400, temp
         completion_tokens: json.usage?.output_tokens
       };
     }
+
+    const promptChars = messages ? messages.reduce((acc, m) => acc + (m.content?.length || 0), 0) : 0;
+    const pTokens = Number(usage?.prompt_tokens) || Math.ceil(promptChars / 3.8);
+    const cTokens = Number(usage?.completion_tokens) || Math.ceil((content?.length || 0) / 3.8);
+    cliMetrics.promptTokens += pTokens;
+    cliMetrics.completionTokens += cTokens;
+    cliMetrics.totalTokens += (pTokens + cTokens);
 
     return { content, usage, latency, raw: json };
   } finally {
@@ -622,8 +631,11 @@ async function main() {
     VECTORS.push({ id: 10, name: 'Type-Level Memory & Lifetime Logic', fn: runVector10 });
   }
 
+  const estMinTokens = VECTORS.length * 120;
+  const estMaxTokens = VECTORS.length * 260;
+
   if (!opts.json) {
-    console.log(`\n[+] ${c.bold}RUNNING ${VECTORS.length} FORENSIC VECTORS:${c.reset}`);
+    console.log(`\n[+] ${c.bold}RUNNING ${VECTORS.length} FORENSIC VECTORS (Est. Tokens: ~${estMinTokens.toLocaleString()} - ${estMaxTokens.toLocaleString()} tk):${c.reset}`);
     console.log('--------------------------------------------------------------------------------');
   }
 
@@ -684,6 +696,7 @@ async function main() {
         score: scorePercentage,
         verdict: verdictLevel.toUpperCase(),
         hasCriticalFailure,
+        tokens: cliMetrics,
         catalog: catalogResult,
         vectors: results
       }
@@ -713,6 +726,7 @@ async function main() {
   console.log(` ${isEn ? 'FORENSIC TEST SCORE' : 'SKOR HASIL UJI'}  : ${c.bold}${verdictColor}${scorePercentage}%${c.reset}`);
   console.log(` ${isEn ? 'VERDICT' : 'HASIL DIAGNOSTIK'}   : ${c.bold}${verdictColor}${verdictText}${c.reset}`);
   console.log(` ${isEn ? 'DETECTED VENDOR' : 'VENDOR ASLI'}    : ${origVendor.family}`);
+  console.log(` ${isEn ? 'TOTAL TOKENS USED' : 'TOTAL TOKEN DIPAKAI'} : ~${cliMetrics.totalTokens.toLocaleString()} tk (Prompt: ~${cliMetrics.promptTokens.toLocaleString()}, Output: ~${cliMetrics.completionTokens.toLocaleString()})`);
   if (targetFake) {
     console.log(` ${isEn ? 'MODEL IDENTIFIER' : 'IDENTITAS MODEL'} : ${c.yellow}${opts.model} (${targetFake.reason})${c.reset}`);
   }

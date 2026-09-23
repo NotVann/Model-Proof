@@ -160,6 +160,8 @@ const TRANSLATIONS = {
     btnAll: 'SEMUA',
     btnFast: 'CEPAT',
     btnClear: 'KOSONG',
+    estTokensLabel: 'Estimasi Token:',
+    tokensConsumed: 'Total Token',
     launchScan: 'Mulai Pindai Forensik',
     statusNotScanned: 'BELUM DI-SCAN',
     scorePlaceholder: '0/0 Tes',
@@ -248,6 +250,8 @@ const TRANSLATIONS = {
     btnAll: 'ALL',
     btnFast: 'FAST',
     btnClear: 'CLEAR',
+    estTokensLabel: 'Est. Token Usage:',
+    tokensConsumed: 'Total Tokens',
     launchScan: 'Launch Forensic Scan',
     statusNotScanned: 'NOT SCANNED',
     scorePlaceholder: '0/0 Tests',
@@ -371,13 +375,17 @@ const el = {
   statTtft: document.getElementById('stat-ttft'),
   statTps: document.getElementById('stat-tps'),
   statTokenMatch: document.getElementById('stat-token-match'),
+  statTokenConsumed: document.getElementById('stat-token-consumed'),
   suiteProgressText: document.getElementById('suite-progress-text'),
+  estTokenBadge: document.getElementById('est-token-badge'),
   // Layman UI Elements
   laymanSummaryCard: document.getElementById('layman-summary-card'),
   laymanStatusBadge: document.getElementById('layman-status-badge'),
   laymanHeadline: document.getElementById('layman-headline'),
   laymanSubtext: document.getElementById('layman-subtext'),
   laymanRiskPill: document.getElementById('layman-risk-pill'),
+  laymanTokenPill: document.getElementById('layman-token-pill'),
+  laymanTokenText: document.getElementById('layman-token-text'),
   laymanEvidenceContainer: document.getElementById('layman-evidence-container'),
   laymanEvidenceList: document.getElementById('layman-evidence-list'),
   laymanActionBar: document.getElementById('layman-action-bar'),
@@ -392,10 +400,28 @@ const el = {
 const auditState = {
   flaggedCatalogModels: [],
   sellerTenant: null,
+  tokenUsage: { prompt: 0, completion: 0, total: 0 },
   findings: [], // Array of { category: 'identity'|'tokens'|'logic'|'temporal'|'catalog', text: string, severity: 'critical'|'warning' }
   identifiedEntities: [],
   lastVerdict: null
 };
+
+// Update Dynamic Estimated Tokens Pill
+function updateEstimatedTokens() {
+  const count = state.selectedTests.length;
+  if (count === 0) {
+    if (el.estTokenBadge) el.estTokenBadge.textContent = '0 tk';
+    if (el.laymanTokenText) el.laymanTokenText.textContent = '0 tk';
+    return;
+  }
+  const minTk = count * 120;
+  const maxTk = count * 260;
+  const rangeStr = `~${minTk.toLocaleString()} - ${maxTk.toLocaleString()} tk`;
+  if (el.estTokenBadge) el.estTokenBadge.textContent = rangeStr;
+  if (el.laymanTokenText && (!auditState.tokenUsage || auditState.tokenUsage.total === 0)) {
+    el.laymanTokenText.textContent = rangeStr;
+  }
+}
 
 // Auto-Protocol Detection Handshake Engine
 async function detectProtocol() {
@@ -575,6 +601,7 @@ function renderTestCheckboxes() {
 
     el.testCheckboxesContainer.appendChild(item);
   });
+  updateEstimatedTokens();
 }
 
 // Render Pipeline Rows with Sleek Card Look (Mobile Responsive)
@@ -911,6 +938,7 @@ function initUI() {
 
   // Set initial language
   setLanguage(state.lang);
+  updateEstimatedTokens();
 
   updateProtocolUI();
 }
@@ -1319,6 +1347,22 @@ async function callModel({ messages, stream = false, maxTokens = 500, temperatur
       prompt_tokens: json.usage?.input_tokens,
       completion_tokens: json.usage?.output_tokens
     };
+  }
+
+  // Accumulate Token Usage
+  const promptChars = messages ? messages.reduce((acc, m) => acc + (m.content?.length || 0), 0) : 0;
+  const pTokens = Number(usage?.prompt_tokens) || Math.ceil(promptChars / 3.8);
+  const cTokens = Number(usage?.completion_tokens) || Math.ceil((content?.length || 0) / 3.8);
+  if (!auditState.tokenUsage) auditState.tokenUsage = { prompt: 0, completion: 0, total: 0 };
+  auditState.tokenUsage.prompt += pTokens;
+  auditState.tokenUsage.completion += cTokens;
+  auditState.tokenUsage.total += (pTokens + cTokens);
+
+  if (el.statTokenConsumed) {
+    el.statTokenConsumed.textContent = `${auditState.tokenUsage.total.toLocaleString()} tk`;
+  }
+  if (el.laymanTokenText) {
+    el.laymanTokenText.textContent = `${auditState.tokenUsage.total.toLocaleString()} tk`;
   }
 
   return { content, usage, returnedModel, latency, raw: json };
@@ -2235,6 +2279,9 @@ async function startAudit() {
   state.isRunning = true;
   auditState.findings = []; // Reset findings for clean audit run
   auditState.identifiedEntities = [];
+  auditState.tokenUsage = { prompt: 0, completion: 0, total: 0 };
+  if (el.statTokenConsumed) el.statTokenConsumed.textContent = '0 tk';
+  updateEstimatedTokens();
 
   // Pre-audit Check: Target model against known fictional/reseller patterns
   const targetFake = checkFakeModelPattern(state.claimedModel);
@@ -2314,6 +2361,15 @@ async function startAudit() {
 
     // Render Plain-Language Executive Summary for Layman Users (also updates header badge & score)
     renderLaymanSummary(scorePercentage, testResults);
+
+    // Finalize Token Usage Telemetry
+    if (el.statTokenConsumed) {
+      el.statTokenConsumed.textContent = `${auditState.tokenUsage.total.toLocaleString()} tk`;
+    }
+    if (el.laymanTokenText) {
+      el.laymanTokenText.textContent = `${auditState.tokenUsage.total.toLocaleString()} tk`;
+    }
+    appendLog(`[Audit Telemetry] Cumulative Token Usage: ~${auditState.tokenUsage.total.toLocaleString()} tk (Prompt: ~${auditState.tokenUsage.prompt.toLocaleString()}, Output: ~${auditState.tokenUsage.completion.toLocaleString()})`, 'highlight');
 
     const v = auditState.lastVerdict;
     if (v.verdictLevel === 'genuine') {
