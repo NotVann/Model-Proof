@@ -139,7 +139,8 @@ const TEST_REGISTRY = [
 
 // App State
 const state = {
-  protocol: 'openai', // 'openai' | 'anthropic'
+  protocolMode: localStorage.getItem('mm_proto_mode') || 'auto', // 'auto' | 'openai' | 'anthropic'
+  detectedProtocol: 'openai', // 'openai' | 'anthropic'
   baseUrl: localStorage.getItem('mm_base_url') || '',
   apiKey: localStorage.getItem('mm_api_key') || '',
   claimedModel: localStorage.getItem('mm_claimed_model') || 'claude-3-5-sonnet-20241022',
@@ -150,8 +151,10 @@ const state = {
 
 // DOM References
 const el = {
+  protoAuto: document.getElementById('proto-auto'),
   protoOpenai: document.getElementById('proto-openai'),
   protoAnthropic: document.getElementById('proto-anthropic'),
+  detectedProtoBadge: document.getElementById('detected-proto-badge'),
   baseUrl: document.getElementById('target-base-url'),
   apiKey: document.getElementById('target-api-key'),
   btnToggleKey: document.getElementById('btn-toggle-key'),
@@ -177,6 +180,107 @@ const el = {
   statTokenMatch: document.getElementById('stat-token-match'),
   suiteProgressText: document.getElementById('suite-progress-text')
 };
+
+// Auto-Protocol Detection Handshake Engine
+async function detectProtocol() {
+  if (state.protocolMode !== 'auto') {
+    state.detectedProtocol = state.protocolMode;
+    updateProtocolBadge(state.protocolMode.toUpperCase(), false);
+    return state.protocolMode;
+  }
+
+  updateProtocolBadge('PROBING...', true);
+  appendLog('[Auto-Detect] Initiating wire protocol handshake...', 'highlight');
+
+  let targetUrl = state.baseUrl || '';
+  const urlLower = targetUrl.toLowerCase();
+  const claimedLower = state.claimedModel.toLowerCase();
+
+  // Fast-path heuristic detection (0ms)
+  if (urlLower.includes('anthropic.com')) {
+    state.detectedProtocol = 'anthropic';
+    updateProtocolBadge('AUTO: ANTHROPIC', false);
+    appendLog('[Auto-Detect] Matched official Anthropic domain -> Locked Anthropic Messages protocol.', 'success');
+    return 'anthropic';
+  }
+
+  if (urlLower.includes('openai.com') || urlLower.includes('deepseek') || urlLower.includes('groq') || urlLower.includes('openrouter')) {
+    state.detectedProtocol = 'openai';
+    updateProtocolBadge('AUTO: OPENAI', false);
+    appendLog('[Auto-Detect] Matched OpenAI-compatible provider -> Locked OpenAI protocol.', 'success');
+    return 'openai';
+  }
+
+  // Active handshake probe on custom reverse proxies
+  if (targetUrl) {
+    const cleanUrl = targetUrl.replace(/\/+$/, '');
+    let probeUrl = `${cleanUrl}/chat/completions`;
+    if (state.corsProxy) probeUrl = state.corsProxy + probeUrl;
+
+    try {
+      const probeRes = await fetch(probeUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.apiKey}`
+        },
+        body: JSON.stringify({ model: state.claimedModel, messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 })
+      });
+
+      // If status is 200, 400 (Bad request with json body), 401 (Auth error), 422 (Unprocessable) -> It's an OpenAI endpoint
+      if (probeRes.status === 200 || probeRes.status === 400 || probeRes.status === 401 || probeRes.status === 422) {
+        state.detectedProtocol = 'openai';
+        updateProtocolBadge('AUTO: OPENAI', false);
+        appendLog(`[Auto-Detect] Endpoint replied HTTP ${probeRes.status} to /chat/completions -> Locked OpenAI Standard.`, 'success');
+        return 'openai';
+      }
+
+      // If 404, probe Anthropic endpoint
+      if (probeRes.status === 404) {
+        let anthropicUrl = `${cleanUrl}/messages`;
+        if (state.corsProxy) anthropicUrl = state.corsProxy + anthropicUrl;
+        
+        const anthropicRes = await fetch(anthropicUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': state.apiKey,
+            'anthropic-version': '2023-06-01'
+          },
+          body: JSON.stringify({ model: state.claimedModel, messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 })
+        });
+
+        if (anthropicRes.status !== 404) {
+          state.detectedProtocol = 'anthropic';
+          updateProtocolBadge('AUTO: ANTHROPIC', false);
+          appendLog(`[Auto-Detect] Endpoint replied HTTP ${anthropicRes.status} to /messages -> Locked Anthropic Native.`, 'success');
+          return 'anthropic';
+        }
+      }
+    } catch (e) {
+      appendLog(`[Auto-Detect] Handshake probe failed (${e.message}), defaulting to OpenAI standard.`, 'warn');
+    }
+  }
+
+  // Fallback heuristic based on model name
+  if (claimedLower.includes('claude') && !targetUrl) {
+    state.detectedProtocol = 'anthropic';
+  } else {
+    state.detectedProtocol = 'openai'; // Universal 98% default
+  }
+
+  updateProtocolBadge(`AUTO: ${state.detectedProtocol.toUpperCase()}`, false);
+  appendLog(`[Auto-Detect] Locked protocol to ${state.detectedProtocol.toUpperCase()} (Universal Standard).`, 'info');
+  return state.detectedProtocol;
+}
+
+function updateProtocolBadge(text, isPulsing = false) {
+  if (!el.detectedProtoBadge) return;
+  el.detectedProtoBadge.innerHTML = `
+    <span class="w-1.5 h-1.5 rounded-full ${isPulsing ? 'bg-cyan-400 animate-ping' : 'bg-emerald-400'}"></span>
+    <span>${text}</span>
+  `;
+}
 
 // Render Checkboxes with Custom SVG Vectors & Bespoke Checkmarks
 function renderTestCheckboxes() {
@@ -280,23 +384,29 @@ function initUI() {
 }
 
 function updateProtocolUI() {
-  if (state.protocol === 'openai') {
-    el.protoOpenai.className = 'py-1.5 px-3 rounded-md transition-all flex items-center justify-center gap-2 font-medium bg-zinc-850 text-zinc-100 border border-zinc-700/80 shadow-sm';
-    el.protoOpenai.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span><span>OpenAI</span>';
-    
-    el.protoAnthropic.className = 'py-1.5 px-3 rounded-md transition-all flex items-center justify-center gap-2 font-medium text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/40 border border-transparent';
-    el.protoAnthropic.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-zinc-600"></span><span>Anthropic</span>';
+  const activeClass = 'py-1.5 px-2 rounded-md transition-all flex items-center justify-center gap-1.5 font-medium bg-zinc-850 text-emerald-400 border border-emerald-500/40 shadow-sm';
+  const inactiveClass = 'py-1.5 px-2 rounded-md transition-all flex items-center justify-center gap-1.5 font-medium text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/40 border border-transparent';
 
+  if (state.protocolMode === 'auto') {
+    el.protoAuto.className = activeClass;
+    el.protoOpenai.className = inactiveClass;
+    el.protoAnthropic.className = inactiveClass;
+    updateProtocolBadge('AUTO: STANDBY', false);
+  } else if (state.protocolMode === 'openai') {
+    el.protoAuto.className = inactiveClass;
+    el.protoOpenai.className = activeClass;
+    el.protoAnthropic.className = inactiveClass;
+    state.detectedProtocol = 'openai';
+    updateProtocolBadge('MANUAL: OPENAI', false);
     if (!el.baseUrl.value || el.baseUrl.value.includes('anthropic.com')) {
       el.baseUrl.placeholder = 'https://api.openai.com/v1';
     }
   } else {
-    el.protoAnthropic.className = 'py-1.5 px-3 rounded-md transition-all flex items-center justify-center gap-2 font-medium bg-zinc-850 text-zinc-100 border border-zinc-700/80 shadow-sm';
-    el.protoAnthropic.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span><span>Anthropic</span>';
-
-    el.protoOpenai.className = 'py-1.5 px-3 rounded-md transition-all flex items-center justify-center gap-2 font-medium text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/40 border border-transparent';
-    el.protoOpenai.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-zinc-600"></span><span>OpenAI</span>';
-
+    el.protoAuto.className = inactiveClass;
+    el.protoOpenai.className = inactiveClass;
+    el.protoAnthropic.className = activeClass;
+    state.detectedProtocol = 'anthropic';
+    updateProtocolBadge('MANUAL: ANTHROPIC', false);
     if (!el.baseUrl.value || el.baseUrl.value.includes('openai.com')) {
       el.baseUrl.placeholder = 'https://api.anthropic.com/v1';
     }
@@ -320,8 +430,23 @@ function appendLog(msg, type = 'info') {
 }
 
 // UI Handlers
-el.protoOpenai.addEventListener('click', () => { state.protocol = 'openai'; updateProtocolUI(); });
-el.protoAnthropic.addEventListener('click', () => { state.protocol = 'anthropic'; updateProtocolUI(); });
+el.protoAuto.addEventListener('click', () => { 
+  state.protocolMode = 'auto'; 
+  localStorage.setItem('mm_proto_mode', 'auto');
+  updateProtocolUI(); 
+});
+
+el.protoOpenai.addEventListener('click', () => { 
+  state.protocolMode = 'openai'; 
+  localStorage.setItem('mm_proto_mode', 'openai');
+  updateProtocolUI(); 
+});
+
+el.protoAnthropic.addEventListener('click', () => { 
+  state.protocolMode = 'anthropic'; 
+  localStorage.setItem('mm_proto_mode', 'anthropic');
+  updateProtocolUI(); 
+});
 
 el.baseUrl.addEventListener('input', (e) => {
   state.baseUrl = e.target.value.trim();
@@ -390,14 +515,15 @@ el.btnSelectNone.addEventListener('click', () => {
 
 // HTTP Request Core
 async function callModel({ messages, stream = false, maxTokens = 500, temperature = 0.0, responseFormat = null }) {
-  let targetUrl = state.baseUrl || (state.protocol === 'openai' ? 'https://api.openai.com/v1' : 'https://api.anthropic.com/v1');
+  const activeProto = state.detectedProtocol || 'openai';
+  let targetUrl = state.baseUrl || (activeProto === 'openai' ? 'https://api.openai.com/v1' : 'https://api.anthropic.com/v1');
   targetUrl = targetUrl.replace(/\/+$/, '');
 
   let endpoint = '';
   let headers = {};
   let body = {};
 
-  if (state.protocol === 'openai') {
+  if (activeProto === 'openai') {
     endpoint = `${targetUrl}/chat/completions`;
     headers = {
       'Content-Type': 'application/json',
@@ -460,7 +586,7 @@ async function callModel({ messages, stream = false, maxTokens = 500, temperatur
   let usage = null;
   let returnedModel = json.model || '';
 
-  if (state.protocol === 'openai') {
+  if (activeProto === 'openai') {
     content = json.choices?.[0]?.message?.content || '';
     usage = json.usage || null;
   } else {
@@ -618,7 +744,7 @@ async function runTest4() {
         if (l.startsWith('data: ') && l !== 'data: [DONE]') {
           try {
             const d = JSON.parse(l.replace('data: ', ''));
-            const part = state.protocol === 'openai' ? d.choices?.[0]?.delta?.content : d.delta?.text;
+            const part = (state.detectedProtocol || 'openai') === 'openai' ? d.choices?.[0]?.delta?.content : d.delta?.text;
             if (part) fullText += part;
           } catch(e) {}
         }
@@ -677,7 +803,7 @@ NEGATIVE RULES:
 async function runTest6() {
   updateTestRow(6, 'RUNNING');
   appendLog('[Vector 6] Probing Native Grammar / Constrained Decoding...');
-  if (state.protocol !== 'openai') {
+  if ((state.detectedProtocol || 'openai') !== 'openai') {
     updateTestRow(6, 'PASSED', 'Grammar test bypassed (OpenAI-specific vector).');
     return { score: 1.0 };
   }
@@ -821,6 +947,9 @@ async function startAudit() {
   const activeTests = TEST_REGISTRY.filter(t => state.selectedTests.includes(t.id));
 
   try {
+    // Phase 0: Pre-flight Wire Protocol Auto-Detection
+    await detectProtocol();
+
     for (let i = 0; i < activeTests.length; i++) {
       const t = activeTests[i];
       const result = await t.run();
