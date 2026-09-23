@@ -158,6 +158,8 @@ const el = {
   baseUrl: document.getElementById('target-base-url'),
   apiKey: document.getElementById('target-api-key'),
   btnToggleKey: document.getElementById('btn-toggle-key'),
+  btnFetchModels: document.getElementById('btn-fetch-models'),
+  inventorySanityBanner: document.getElementById('inventory-sanity-banner'),
   claimedModelSelect: document.getElementById('claimed-model-select'),
   claimedModelCustom: document.getElementById('claimed-model-custom'),
   toggleCorsOpts: document.getElementById('toggle-cors-opts'),
@@ -524,6 +526,143 @@ el.claimedModelCustom.addEventListener('input', (e) => {
   state.claimedModel = e.target.value.trim();
   localStorage.setItem('mm_claimed_model', state.claimedModel);
 });
+
+// Live Model Inventory Fetcher & Heuristic Sanity Scanner
+async function fetchAvailableModels() {
+  if (!state.apiKey) {
+    showToast('Please enter an API Key to query /v1/models', 'error');
+    el.apiKey.focus();
+    return;
+  }
+
+  const origBtnText = el.btnFetchModels.innerHTML;
+  el.btnFetchModels.disabled = true;
+  el.btnFetchModels.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-emerald-400"></i> <span>Querying...</span>';
+  appendLog('[Inventory Audit] Querying GET /v1/models...', 'highlight');
+
+  let targetUrl = state.baseUrl || 'https://api.openai.com/v1';
+  targetUrl = targetUrl.replace(/\/+$/, '');
+  let endpoint = `${targetUrl}/models`;
+  if (state.corsProxy) endpoint = state.corsProxy + endpoint;
+
+  let headers = {
+    'Authorization': `Bearer ${state.apiKey}`,
+    'x-api-key': state.apiKey
+  };
+
+  let res;
+  try {
+    try {
+      res = await fetch(endpoint, { method: 'GET', headers });
+    } catch (err) {
+      if ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && !state.corsProxy) {
+        appendLog('[Inventory Audit] Direct call blocked by CORS. Using local relay...', 'warn');
+        res = await fetch(`/api/proxy?url=${encodeURIComponent(endpoint)}`, { method: 'GET', headers });
+      } else {
+        throw err;
+      }
+    }
+
+    if (!res.ok) {
+      const errTxt = await res.text();
+      throw new Error(`HTTP ${res.status}: ${errTxt.slice(0, 100)}`);
+    }
+
+    const json = await res.json();
+    const models = json.data || [];
+
+    if (!Array.isArray(models) || models.length === 0) {
+      showToast('No models returned from /v1/models endpoint.', 'warn');
+      appendLog('[Inventory Audit] Endpoint returned 0 models.', 'warn');
+      return;
+    }
+
+    appendLog(`[Inventory Audit] Retrieved ${models.length} model definitions from upstream catalog.`, 'success');
+
+    // Run Heuristic Sanity Scan on Model Catalog
+    const flagged = [];
+    const customOwners = new Set();
+
+    const FAKE_PATTERNS = [
+      { regex: /claude.*(4-5|4\.5|5|opus-5|sonnet-4-5|sonnet-4$)/i, reason: 'Fictional/Unreleased Anthropic Model' },
+      { regex: /deepseek.*(3\.[2-9]|v4)/i, reason: 'Fictional DeepSeek Model' },
+      { regex: /grok.*(4-5|5)/i, reason: 'Fictional xAI Grok Model' },
+      { regex: /glm-5/i, reason: 'Unreleased GLM Model' },
+      { regex: /arza|mod|custom|hack|shared/i, reason: 'Custom Reseller-Branded String' }
+    ];
+
+    models.forEach(m => {
+      const id = m.id || '';
+      for (const p of FAKE_PATTERNS) {
+        if (p.regex.test(id)) {
+          flagged.push({ id, reason: p.reason });
+          break;
+        }
+      }
+      if (m.owned_by && !['openai', 'anthropic', 'system', 'google', 'meta', 'deepseek', 'mistral'].includes(m.owned_by.toLowerCase())) {
+        customOwners.add(m.owned_by);
+      }
+    });
+
+    // Populate Dropdown
+    el.claimedModelSelect.innerHTML = '';
+    models.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      const ownerLabel = m.owned_by ? ` [${m.owned_by}]` : '';
+      opt.textContent = `${m.id}${ownerLabel}`;
+      el.claimedModelSelect.appendChild(opt);
+    });
+
+    // Add custom option at end
+    const customOpt = document.createElement('option');
+    customOpt.value = 'custom';
+    customOpt.textContent = '-- Custom Identity String --';
+    el.claimedModelSelect.appendChild(customOpt);
+
+    // Select first model
+    state.claimedModel = models[0].id;
+    el.claimedModelSelect.value = state.claimedModel;
+    localStorage.setItem('mm_claimed_model', state.claimedModel);
+
+    // Display Inventory Sanity Banner
+    el.inventorySanityBanner.classList.remove('hidden');
+    if (flagged.length > 0) {
+      el.inventorySanityBanner.className = 'mt-2 p-2.5 rounded border border-rose-800/70 bg-rose-950/40 text-[11px] font-mono text-rose-300 space-y-1';
+      const flaggedList = flagged.map(f => `<span class="bg-rose-900/60 px-1 py-0.5 rounded text-rose-200">${f.id}</span>`).join(' ');
+      const ownerAlert = customOwners.size > 0 ? `<div class="text-[10px] text-rose-400">Reseller Tenant: ${Array.from(customOwners).join(', ')}</div>` : '';
+      
+      el.inventorySanityBanner.innerHTML = `
+        <div class="flex items-center gap-1.5 font-bold text-rose-400">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span>SUSPICIOUS INVENTORY DETECTED (${flagged.length} Fake Models)</span>
+        </div>
+        <div class="text-[10px] leading-relaxed">Upstream catalog contains fabricated model IDs: ${flaggedList}</div>
+        ${ownerAlert}
+      `;
+      appendLog(`[Inventory Audit] ⚠️ Flagged ${flagged.length} non-existent model IDs in seller catalog!`, 'error');
+      showToast(`Flagged ${flagged.length} fake model names in seller inventory!`, 'warn');
+    } else {
+      el.inventorySanityBanner.className = 'mt-2 p-2 rounded border border-emerald-800/60 bg-emerald-950/30 text-[11px] font-mono text-emerald-300';
+      el.inventorySanityBanner.innerHTML = `
+        <div class="flex items-center gap-1.5 font-semibold text-emerald-400">
+          <i class="fa-solid fa-circle-check"></i>
+          <span>${models.length} standard models retrieved. No fakes detected in naming.</span>
+        </div>
+      `;
+      showToast(`Loaded ${models.length} available models from upstream catalog.`, 'success');
+    }
+
+  } catch (err) {
+    appendLog(`[Inventory Audit] Failed to query /v1/models: ${err.message}`, 'error');
+    showToast(`Failed to fetch /v1/models: ${err.message}`, 'error');
+  } finally {
+    el.btnFetchModels.disabled = false;
+    el.btnFetchModels.innerHTML = origBtnText;
+  }
+}
+
+el.btnFetchModels.addEventListener('click', fetchAvailableModels);
 
 el.toggleCorsOpts.addEventListener('click', () => el.corsDrawer.classList.toggle('hidden'));
 
