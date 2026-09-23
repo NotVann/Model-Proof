@@ -1487,7 +1487,16 @@ async function callModel({ messages, stream = false, maxTokens = 500, temperatur
 
   if (!res.ok) {
     const errorText = await res.text();
-    throw new Error(`HTTP ${res.status}: ${errorText.slice(0, 160)}`);
+    let cleanMsg = errorText.slice(0, 160);
+    if (res.status === 504) {
+      cleanMsg = 'Gateway Timeout: Server reverse proxy/Cloudflare penjual kehabisan waktu menunggu respons dari upstream backend (upstream server down atau overload).';
+    } else if (res.status === 502) {
+      cleanMsg = 'Bad Gateway: Reverse proxy penjual tidak bisa terhubung ke backend server model.';
+    } else if (errorText.includes('<html') || errorText.includes('<!DOCTYPE')) {
+      const titleMatch = errorText.match(/<title>([^<]+)<\/title>/i);
+      cleanMsg = titleMatch ? titleMatch[1].trim() : `HTML Gateway Error (${res.status})`;
+    }
+    throw new Error(`HTTP ${res.status}: ${cleanMsg}`);
   }
 
   if (stream) return { res, startTime };
