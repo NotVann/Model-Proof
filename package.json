@@ -1,0 +1,36 @@
+{
+  "name": "modelproof",
+  "version": "2.4.0",
+  "description": "Zero-persistence client-side & CLI forensic scanner to detect LLM model spoofing, masking, and downgrading.",
+  "main": "bin/modelproof.js",
+  "bin": {
+    "modelproof": "./bin/modelproof.js"
+  },
+  "keywords": [
+    "llm",
+    "ai",
+    "openai",
+    "anthropic",
+    "deepseek",
+    "qwen",
+    "forensics",
+    "model-spoofing",
+    "reverse-proxy",
+    "security",
+    "benchmark"
+  ],
+  "author": "ModelProof Contributors",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "bin/",
+    "LICENSE",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/siumik/ai-model-mask-checker.git"
+  }
+}

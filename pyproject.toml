@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "modelproof"
+version = "2.4.0"
+description = "Zero-persistence client-side and CLI forensic scanner to detect LLM model spoofing, masking, and downgrading."
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+keywords = [
+    "llm",
+    "ai",
+    "openai",
+    "anthropic",
+    "deepseek",
+    "qwen",
+    "forensics",
+    "model-spoofing",
+    "reverse-proxy",
+    "security",
+    "benchmark"
+]
+authors = [
+    { name = "ModelProof Contributors" }
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Security",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13"
+]
+
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/siumik/ai-model-mask-checker"
+Repository = "https://github.com/siumik/ai-model-mask-checker"
+
+[project.scripts]
+modelproof = "modelproof.cli:main"

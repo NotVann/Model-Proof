@@ -1,38 +1,72 @@
-# ModelMaskScanner 🛡️
+# ModelProof 🛡️
+> Zero-persistence client-side and CLI forensic scanner to detect LLM model spoofing, proxy masking, and silent downgrades.
 
-100% Serverless, client-side tool to detect AI model masking, reverse-proxy downgrading, and inference spoofing (e.g. seller claiming Claude 3.5 Sonnet or GPT-4o, but routing to GPT-4o-mini or Llama-3-8B).
-
-Live on **GitHub Pages** with zero backend infrastructure.
-
----
-
-## ⚡ 5-Vector Detection Matrix
-
-1. **Logic & Spatial Reasoning Horizon**
-   - Obfuscated character counting trap (`'s-t-r-a-w-b-e-r-r-y'`) + multi-step constraints.
-   - Low-tier models (GPT-3.5, Mini, Llama-8B) fail character indexing while Flagship models pass.
-2. **Tokenizer Usage & BPE Precision**
-   - Sends crafted multi-byte Unicode sequence.
-   - Flags anomalies when reported `prompt_tokens` diverges from target tokenizer standards (e.g. `o200k_base` vs `cl100k_base`).
-3. **Internal System Identity & Vendor Reflection**
-   - Adversarial prompt designed to bypass seller's custom system prompt injection.
-   - Catches cross-vendor spoofs (e.g. seller claiming Claude, model answers with OpenAI/DeepSeek identity).
-4. **Streaming Telemetry & Speed Profiling (TTFT & TPS)**
-   - Real-time SSE stream parser measuring Time-to-First-Token (TTFT) and Tokens-per-Second (TPS).
-   - Catches ultra-fast hardware spoofing (e.g. Groq/SambaNova running Llama at 300+ TPS sold as Claude).
-5. **Zero-Fluff Formatting Discipline**
-   - Enforces strict negative constraints (no conversational preambles, pure raw SVG tags).
-   - Mini/low-tier models consistently fail negative constraints.
+Available as:
+- **Web App**: 100% Client-side sandbox deployable on GitHub Pages.
+- **Node.js CLI**: Run instantly via `npx modelproof`.
+- **Python CLI**: Run via `pip install modelproof` or `python -m modelproof.cli`.
 
 ---
 
-## 🚀 How to Deploy to GitHub Pages (1 Minute)
+## ⚡ 10-Vector Detection Matrix
+
+1. **Spatial Logic & Character Horizon**: Obfuscated character counting trap (`'s-t-r-a-w-b-e-r-r-y'`) + runtime multiplication trap.
+2. **Tokenizer Usage & BPE Precision**: Multi-byte Unicode sequence testing token discrepancy and upstream token stripping.
+3. **Internal System Identity & Vendor Breakout**: Adversarial prompts probing foundational weights and vendor disavowal.
+4. **Streaming Telemetry & Speed Profiling (TTFT & TPS)**: Real-time SSE stream parser measuring Time-to-First-Token and Tokens-per-Second.
+5. **Negative Constraint Compliance**: Enforces strict negative constraints (zero fluff, raw CSV/SVG).
+6. **Strict Schema / Constrained Decoding**: Tests native JSON Schema strict parsing (crashes weak proxy engines).
+7. **Glitched Token Embedding Anomaly**: Probes unspeakable tokens (`SolidGoldMagikarp`) tokenizer behavior.
+8. **Temporal Cutoff Horizon (2024-H2)**: Validates late-2024 events (Nobel October 2024, Python 3.13).
+9. **Reasoning CoT & Delimiter Trap**: Checks reasoning tokens vs `<think>` tags (detects DeepSeek-R1 masked as OpenAI o1).
+10. **High-Order Type Logic**: Tests compiler-level Rust lifetime borrow checker & HRTB syntax.
+
+---
+
+## 💻 CLI Quickstart
+
+### Option A: NPX (No installation required)
+```bash
+# Instant audit via npx
+npx modelproof -u "https://router.arzastore.com/v1" -k "sk-..." -m "qwen-3-8-max"
+
+# Deep audit with all 10 vectors + JSON output
+npx modelproof -u "https://api.openai.com/v1" -k "$OPENAI_API_KEY" -m "gpt-4o" --all --json
+```
+
+### Option B: Python (PIP)
+```bash
+# Install package
+pip install modelproof
+
+# Run audit
+modelproof -u "https://router.arzastore.com/v1" -k "sk-..." -m "qwen-3-8-max"
+
+# Audit catalog only
+modelproof -u "https://router.arzastore.com/v1" -k "sk-..." --models-only
+```
+
+### CLI Options:
+| Flag | Description | Default |
+| :--- | :--- | :--- |
+| `-u, --base-url` | Reverse proxy base URL | `https://api.openai.com/v1` |
+| `-k, --key` | API Token / Key | `$OPENAI_API_KEY` |
+| `-m, --model` | Claimed model profile | `claude-3-5-sonnet-20241022` |
+| `-p, --protocol` | Protocol wire schema (`auto`, `openai`, `anthropic`) | `auto` |
+| `-a, --all` | Run all 10 vectors (default: 8 fast vectors) | `false` |
+| `--models-only` | Audit `/v1/models` catalog only | `false` |
+| `--lang` | Report language (`en`, `id`) | `en` |
+| `--json` | Output pure JSON for CI/CD | `false` |
+| `--timeout` | Request timeout in seconds | `30` |
+
+---
+
+## 🌐 Web App Deployment (GitHub Pages)
 
 1. Push this directory to your GitHub repository:
    ```bash
    git add .
    git commit -m "feat: initial release"
-   git remote add origin https://github.com/<your-username>/<your-repo-name>.git
    git branch -M main
    git push -u origin main
    ```
@@ -45,43 +79,8 @@ Live on **GitHub Pages** with zero backend infrastructure.
 
 ---
 
-## 🌐 CORS Notice & Optional Relay Worker
-
-Most reseller proxies (NewAPI, OneAPI, LiteLLM) have `Access-Control-Allow-Origin: *` enabled by default, so direct browser calls work out-of-the-box.
-
-If a seller's custom domain blocks browser CORS, deploy this 10-line Cloudflare Worker (Free tier) as a transparent relay:
-
-```javascript
-export default {
-  async fetch(request) {
-    if (request.method === "OPTIONS") {
-      return new Response(null, {
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-          "Access-Control-Allow-Headers": "*"
-        }
-      });
-    }
-    const url = new URL(request.url);
-    const target = url.searchParams.get("url") || url.pathname.slice(1);
-    const res = await fetch(target, {
-      method: request.method,
-      headers: request.headers,
-      body: request.body
-    });
-    const newHeaders = new Headers(res.headers);
-    newHeaders.set("Access-Control-Allow-Origin", "*");
-    return new Response(res.body, { status: res.status, headers: newHeaders });
-  }
-};
-```
-Paste your worker URL into the **CORS Relay Settings** field in the UI.
-
----
-
 ## 🔒 Privacy & Security
 
-- 100% Client-Side execution (`fetch()` directly from browser).
-- API keys are stored solely in browser `localStorage` or memory.
-- Zero server-side logging or tracking.
+- **Zero Telemetry**: All requests travel strictly between your client and your designated proxy.
+- **In-Memory**: API keys are never persisted or shared.
+- **Open Source**: Full code inspection available under the MIT License.
