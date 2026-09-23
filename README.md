@@ -16,6 +16,10 @@
   <img src="https://img.shields.io/badge/dependencies-0-brightgreen" alt="Zero Dependencies" />
 </p>
 
+<p align="center">
+  <strong>English</strong> | <a href="README.id.md">Bahasa Indonesia</a>
+</p>
+
 ---
 
 ## Overview
@@ -26,6 +30,22 @@ Unauthorized LLM resellers and reverse-proxy providers often engage in model spo
 - Fabricating fake model IDs in `/v1/models` catalogs.
 
 ModelProof provides developers, QA engineers, and consumers with a verifiable forensic audit trail and an authenticity confidence score (0-100%) before trusting an endpoint in production.
+
+---
+
+## Why This Matters
+
+1. **Financial Arbitrage (Paying Flagship, Receiving Commodity)**:
+   Resellers charge premium rates for flagship models while silently routing traffic to commodity models costing a fraction of the price. Users overpay up to 15x for degraded intelligence.
+
+2. **Silent Production Breakage**:
+   Substituted models fail on nuanced reasoning, strict JSON Schema compliance, tool calling, and high-order logic, causing silent corruption in autonomous agents and backend pipelines.
+
+3. **Data Exfiltration and Prompt Manipulation**:
+   Untrusted reverse-proxy layers may log raw prompts, inject hidden system preambles, or manipulate token streams before forwarding to unvetted upstream endpoints.
+
+4. **Actionable Dispute Evidence**:
+   ModelProof generates deterministic, timestamped forensic audit reports that can be used directly as technical proof for refund requests or merchant disputes.
 
 ---
 

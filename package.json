@@ -27,7 +27,8 @@
   "files": [
     "bin/",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "README.id.md"
   ],
   "repository": {
     "type": "git",
