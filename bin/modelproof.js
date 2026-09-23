@@ -28,7 +28,7 @@ const c = {
 // Help text
 function printHelp() {
   console.log(`
-${c.bold}${c.cyan}MODELPROOF CLI // LLM Proxy & Masking Forensic Scanner (v1.0.0)${c.reset}
+${c.bold}${c.cyan}MODELPROOF CLI // LLM Proxy & Masking Forensic Scanner (v1.0.1)${c.reset}
 Detect model spoofing, masking, and downgrading on reverse proxies.
 
 ${c.bold}USAGE:${c.reset}
@@ -75,7 +75,7 @@ function parseArgs() {
     const a = args[i];
     if (a === '-h' || a === '--help') printHelp();
     if (a === '-v' || a === '--version') {
-      console.log('1.0.0');
+      console.log('1.0.1');
       process.exit(0);
     }
     if ((a === '-u' || a === '--base-url') && args[i + 1]) opts.baseUrl = args[++i];
@@ -501,7 +501,7 @@ async function main() {
   // Friendly fallback if user runs without args and no API key is set
   if (!opts.apiKey) {
     console.log(`\n${c.bold}================================================================================${c.reset}`);
-    console.log(` ${c.bold}${c.cyan}MODELPROOF CLI${c.reset} // LLM Proxy & Masking Forensic Scanner (v1.0.0)`);
+    console.log(` ${c.bold}${c.cyan}MODELPROOF CLI${c.reset} // LLM Proxy & Masking Forensic Scanner (v1.0.1)`);
     console.log(`${c.bold}================================================================================${c.reset}`);
     console.log(`Zero-persistence scanner to detect model spoofing, masking, and proxy downgrades.\n`);
     console.log(`${c.bold}QUICKSTART:${c.reset}`);
@@ -517,7 +517,7 @@ async function main() {
 
   if (!opts.json) {
     console.log(`\n${c.bold}================================================================================${c.reset}`);
-    console.log(` ${c.bold}${c.cyan}MODELPROOF CLI${c.reset} // LLM Proxy & Masking Forensic Scanner (v1.0.0)`);
+    console.log(` ${c.bold}${c.cyan}MODELPROOF CLI${c.reset} // LLM Proxy & Masking Forensic Scanner (v1.0.1)`);
     console.log(` Target: ${c.bold}${opts.model}${c.reset} @ ${opts.baseUrl}`);
     console.log(`${c.bold}================================================================================${c.reset}`);
   }

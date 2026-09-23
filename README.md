@@ -150,7 +150,7 @@ Options:
 
 ```text
 ================================================================================
- MODELPROOF CLI // LLM Proxy & Masking Forensic Scanner (v1.0.0)
+ MODELPROOF CLI // LLM Proxy & Masking Forensic Scanner (v1.0.1)
  Target: claude-3-5-sonnet-20241022 @ https://my-custom-proxy.com/v1
 ================================================================================
 [*] Protocol Wire Schema: ANTHROPIC

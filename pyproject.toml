@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "modelproof"
-version = "1.0.0"
+version = "1.0.1"
 description = "Zero-persistence client-side and CLI forensic scanner to detect LLM model spoofing, masking, and downgrading."
 readme = "README.md"
 requires-python = ">=3.8"

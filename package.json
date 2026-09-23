@@ -1,6 +1,6 @@
 {
   "name": "modelproof",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Zero-persistence client-side & CLI forensic scanner to detect LLM model spoofing, masking, and downgrading.",
   "main": "bin/modelproof.js",
   "bin": {

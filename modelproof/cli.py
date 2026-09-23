@@ -424,13 +424,13 @@ Examples:
     parser.add_argument("--lang", default="en", choices=["en", "id"], help="Output language (default: en)")
     parser.add_argument("--json", action="store_true", help="Output pure JSON report for CI/CD pipelines")
     parser.add_argument("--timeout", type=int, default=30, help="Per-request timeout in seconds (default: 30)")
-    parser.add_argument("-v", "--version", action="version", version="1.0.0")
+    parser.add_argument("-v", "--version", action="version", version="1.0.1")
 
     args = parser.parse_args()
 
     if not args.key:
         print(f"\n{C_BOLD}================================================================================{C_RESET}")
-        print(f" {C_BOLD}{C_CYAN}MODELPROOF CLI{C_RESET} // LLM Proxy & Masking Forensic Scanner (v1.0.0)")
+        print(f" {C_BOLD}{C_CYAN}MODELPROOF CLI{C_RESET} // LLM Proxy & Masking Forensic Scanner (v1.0.1)")
         print(f"{C_BOLD}================================================================================{C_RESET}")
         print("Zero-persistence scanner to detect model spoofing, masking, and proxy downgrades.\n")
         print(f"{C_BOLD}QUICKSTART:{C_RESET}")
@@ -446,7 +446,7 @@ Examples:
 
     if not args.json:
         print(f"\n{C_BOLD}================================================================================{C_RESET}")
-        print(f" {C_BOLD}{C_CYAN}MODELPROOF CLI{C_RESET} // LLM Proxy & Masking Forensic Scanner (v1.0.0)")
+        print(f" {C_BOLD}{C_CYAN}MODELPROOF CLI{C_RESET} // LLM Proxy & Masking Forensic Scanner (v1.0.1)")
         print(f" Target: {C_BOLD}{args.model}{C_RESET} @ {args.base_url}")
         print(f"{C_BOLD}================================================================================{C_RESET}")
 
