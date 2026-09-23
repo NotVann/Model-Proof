@@ -282,29 +282,35 @@ function updateProtocolBadge(text, isPulsing = false) {
   `;
 }
 
-// Render Checkboxes with Custom SVG Vectors & Bespoke Checkmarks
+// Render Checkboxes with Explicit Crisp SVG Checkmark
 function renderTestCheckboxes() {
   el.testCheckboxesContainer.innerHTML = '';
   TEST_REGISTRY.forEach(t => {
     const isChecked = state.selectedTests.includes(t.id);
-    const item = document.createElement('label');
-    const checkedBorderClass = isChecked ? 'border-emerald-500/40 bg-emerald-950/20' : 'border-zinc-800/60 bg-zinc-950/40';
-    item.className = `group flex items-start gap-3 p-2.5 rounded-lg border ${checkedBorderClass} hover:border-zinc-700 cursor-pointer transition-all duration-150 select-none test-card-${t.id}`;
+    const item = document.createElement('div');
+    const checkedCardBorder = isChecked ? 'border-emerald-500/50 bg-emerald-950/20' : 'border-zinc-800/70 bg-zinc-950/40';
+    item.className = `group flex items-start gap-3 p-2.5 rounded-lg border ${checkedCardBorder} hover:border-zinc-700 cursor-pointer transition-all duration-150 select-none`;
     
+    // Checkbox box styling & SVG icon
+    const checkboxBoxClass = isChecked 
+      ? 'w-5 h-5 rounded bg-emerald-500 border border-emerald-400 text-zinc-950 shadow-sm shadow-emerald-950/50 flex items-center justify-center shrink-0 mt-0.5 transition-all'
+      : 'w-5 h-5 rounded bg-zinc-900 border border-zinc-700 group-hover:border-zinc-500 flex items-center justify-center shrink-0 mt-0.5 transition-all';
+    
+    const checkmarkSvg = isChecked 
+      ? `<svg class="w-3.5 h-3.5 stroke-[3] text-zinc-950" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+        </svg>`
+      : '';
+
     item.innerHTML = `
-      <div class="relative flex items-center justify-center mt-0.5">
-        <input type="checkbox" value="${t.id}" ${isChecked ? 'checked' : ''} class="peer sr-only test-checkbox">
-        <div class="w-4 h-4 rounded border border-zinc-700 bg-zinc-900 group-hover:border-zinc-500 peer-checked:bg-emerald-500 peer-checked:border-emerald-400 flex items-center justify-center transition-all shadow-inner">
-          <svg class="w-2.5 h-2.5 text-zinc-950 opacity-0 peer-checked:opacity-100 transition-opacity stroke-[3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-          </svg>
-        </div>
+      <div class="checkbox-box ${checkboxBoxClass}">
+        ${checkmarkSvg}
       </div>
-      <div class="space-y-0.5 flex-1">
+      <div class="space-y-0.5 flex-1 pointer-events-none">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <span class="text-zinc-500 group-hover:text-emerald-400 transition-colors">${t.svg}</span>
-            <span class="text-xs font-mono font-medium text-zinc-300 group-hover:text-zinc-100 transition-colors">${String(t.id).padStart(2, '0')}. ${t.name}</span>
+            <span class="${isChecked ? 'text-emerald-400' : 'text-zinc-500'} transition-colors">${t.svg}</span>
+            <span class="text-xs font-mono font-medium ${isChecked ? 'text-zinc-100' : 'text-zinc-300'} transition-colors">${String(t.id).padStart(2, '0')}. ${t.name}</span>
           </div>
           ${t.quick 
             ? '<span class="text-[9px] px-1.5 py-0.2 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 font-mono">FAST</span>' 
@@ -314,17 +320,19 @@ function renderTestCheckboxes() {
       </div>
     `;
 
-    item.querySelector('.test-checkbox').addEventListener('change', (e) => {
-      const id = parseInt(e.target.value);
-      if (e.target.checked) {
-        if (!state.selectedTests.includes(id)) state.selectedTests.push(id);
-        item.className = item.className.replace('border-zinc-800/60 bg-zinc-950/40', 'border-emerald-500/40 bg-emerald-950/20');
+    // Direct click handler for the entire vector card
+    item.addEventListener('click', () => {
+      const exists = state.selectedTests.includes(t.id);
+      if (exists) {
+        state.selectedTests = state.selectedTests.filter(x => x !== t.id);
       } else {
-        state.selectedTests = state.selectedTests.filter(x => x !== id);
-        item.className = item.className.replace('border-emerald-500/40 bg-emerald-950/20', 'border-zinc-800/60 bg-zinc-950/40');
+        state.selectedTests.push(t.id);
       }
       state.selectedTests.sort((a, b) => a - b);
       localStorage.setItem('mm_selected_tests', JSON.stringify(state.selectedTests));
+      
+      // Re-render both panels cleanly
+      renderTestCheckboxes();
       renderPipelineRows();
     });
 
