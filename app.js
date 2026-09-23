@@ -413,17 +413,78 @@ function renderPipelineRows() {
   });
 }
 
+// Comprehensive Original AI Vendor Mapping
+function detectOriginalVendor(modelId = '') {
+  const m = modelId.toLowerCase();
+  if (m.includes('claude')) return { name: 'Anthropic', badge: 'bg-amber-950/50 text-amber-300 border-amber-800/60' };
+  if (m.includes('gpt-') || m.includes('o1') || m.includes('o3') || m.includes('chatgpt') || m.includes('text-embedding') || m.includes('dall-e')) {
+    return { name: 'OpenAI', badge: 'bg-emerald-950/50 text-emerald-300 border-emerald-800/60' };
+  }
+  if (m.includes('gemini') || m.includes('gemma') || m.includes('palm')) {
+    return { name: 'Google', badge: 'bg-blue-950/50 text-blue-300 border-blue-800/60' };
+  }
+  if (m.includes('llama') || m.includes('meta-')) {
+    return { name: 'Meta', badge: 'bg-sky-950/50 text-sky-300 border-sky-800/60' };
+  }
+  if (m.includes('deepseek')) {
+    return { name: 'DeepSeek', badge: 'bg-cyan-950/50 text-cyan-300 border-cyan-800/60' };
+  }
+  if (m.includes('qwen')) {
+    return { name: 'Alibaba Qwen', badge: 'bg-orange-950/50 text-orange-300 border-orange-800/60' };
+  }
+  if (m.includes('mistral') || m.includes('mixtral') || m.includes('codestral') || m.includes('pixtral')) {
+    return { name: 'Mistral AI', badge: 'bg-rose-950/50 text-rose-300 border-rose-800/60' };
+  }
+  if (m.includes('grok')) {
+    return { name: 'xAI', badge: 'bg-zinc-800 text-zinc-200 border-zinc-700' };
+  }
+  if (m.includes('command-r') || m.includes('cohere')) {
+    return { name: 'Cohere', badge: 'bg-teal-950/50 text-teal-300 border-teal-800/60' };
+  }
+  if (m.includes('phi-') || m.includes('wizardlm')) {
+    return { name: 'Microsoft', badge: 'bg-blue-950/50 text-blue-300 border-blue-800/60' };
+  }
+  if (m.includes('hunyuan')) {
+    return { name: 'Tencent', badge: 'bg-indigo-950/50 text-indigo-300 border-indigo-800/60' };
+  }
+  if (m.includes('moonshot') || m.includes('kimi')) {
+    return { name: 'Moonshot', badge: 'bg-purple-950/50 text-purple-300 border-purple-800/60' };
+  }
+  if (m.includes('glm') || m.includes('chatglm')) {
+    return { name: 'Zhipu AI', badge: 'bg-violet-950/50 text-violet-300 border-violet-800/60' };
+  }
+  if (m.includes('yi-')) {
+    return { name: '01.AI', badge: 'bg-lime-950/50 text-lime-300 border-lime-800/60' };
+  }
+  if (m.includes('doubao') || m.includes('skylark')) {
+    return { name: 'ByteDance', badge: 'bg-cyan-950/50 text-cyan-300 border-cyan-800/60' };
+  }
+  if (m.includes('baichuan')) {
+    return { name: 'Baichuan', badge: 'bg-amber-950/50 text-amber-300 border-amber-800/60' };
+  }
+  if (m.includes('titan') || m.includes('nova')) {
+    return { name: 'Amazon AWS', badge: 'bg-yellow-950/50 text-yellow-300 border-yellow-800/60' };
+  }
+  if (m.includes('dbrx')) {
+    return { name: 'Databricks', badge: 'bg-red-950/50 text-red-300 border-red-800/60' };
+  }
+  if (m.includes('arctic')) {
+    return { name: 'Snowflake', badge: 'bg-cyan-950/50 text-cyan-300 border-cyan-800/60' };
+  }
+  return { name: 'Foundation Model', badge: 'bg-zinc-900 text-zinc-400 border-zinc-800' };
+}
+
 // Model Catalog State for Searchable Combobox
 const DEFAULT_PRESET_MODELS = [
-  { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet (claude-3-5-sonnet-20241022)', vendor: 'Anthropic' },
-  { id: 'claude-3-7-sonnet', name: 'Claude 3.7 Sonnet (claude-3-7-sonnet)', vendor: 'Anthropic' },
-  { id: 'gpt-4o', name: 'GPT-4o (gpt-4o)', vendor: 'OpenAI' },
-  { id: 'gpt-4o-mini', name: 'GPT-4o Mini (gpt-4o-mini)', vendor: 'OpenAI' },
-  { id: 'o1', name: 'OpenAI o1 (o1 / o1-preview)', vendor: 'OpenAI' },
-  { id: 'o3-mini', name: 'OpenAI o3-mini (o3-mini)', vendor: 'OpenAI' },
-  { id: 'deepseek-r1', name: 'DeepSeek R1 (deepseek-r1)', vendor: 'DeepSeek' },
-  { id: 'qwen-2.5-72b-instruct', name: 'Qwen 2.5 72B Instruct (qwen-2.5-72b-instruct)', vendor: 'Alibaba' },
-  { id: 'llama-3.3-70b-instruct', name: 'Meta Llama 3.3 70B (llama-3.3-70b-instruct)', vendor: 'Meta' }
+  { id: 'claude-3-5-sonnet-20241022', name: 'claude-3-5-sonnet-20241022', seller: 'Official' },
+  { id: 'claude-3-7-sonnet', name: 'claude-3-7-sonnet', seller: 'Official' },
+  { id: 'gpt-4o', name: 'gpt-4o', seller: 'Official' },
+  { id: 'gpt-4o-mini', name: 'gpt-4o-mini', seller: 'Official' },
+  { id: 'o1', name: 'o1', seller: 'Official' },
+  { id: 'o3-mini', name: 'o3-mini', seller: 'Official' },
+  { id: 'deepseek-r1', name: 'deepseek-r1', seller: 'Official' },
+  { id: 'qwen-2.5-72b-instruct', name: 'qwen-2.5-72b-instruct', seller: 'Official' },
+  { id: 'llama-3.3-70b-instruct', name: 'llama-3.3-70b-instruct', seller: 'Official' }
 ];
 
 let catalogModels = [...DEFAULT_PRESET_MODELS];
@@ -433,11 +494,14 @@ function renderModelOptions(searchTerm = '') {
   el.modelOptionsList.innerHTML = '';
   const term = searchTerm.toLowerCase().trim();
 
-  const filtered = catalogModels.filter(m => 
-    m.id.toLowerCase().includes(term) || 
-    (m.name && m.name.toLowerCase().includes(term)) ||
-    (m.vendor && m.vendor.toLowerCase().includes(term))
-  );
+  const filtered = catalogModels.filter(m => {
+    const orig = detectOriginalVendor(m.id).name.toLowerCase();
+    const seller = (m.seller || '').toLowerCase();
+    return m.id.toLowerCase().includes(term) || 
+           (m.name && m.name.toLowerCase().includes(term)) ||
+           orig.includes(term) ||
+           seller.includes(term);
+  });
 
   if (filtered.length === 0) {
     el.modelOptionsList.innerHTML = `
@@ -448,20 +512,36 @@ function renderModelOptions(searchTerm = '') {
   } else {
     filtered.forEach(m => {
       const isSelected = state.claimedModel === m.id;
+      const origVendor = detectOriginalVendor(m.id);
+      const sellerName = m.seller && m.seller !== 'system' && m.seller !== 'Official' ? m.seller : null;
+
       const item = document.createElement('div');
-      item.className = `p-2 rounded cursor-pointer transition flex items-center justify-between ${
-        isSelected ? 'bg-emerald-950/40 text-emerald-300 font-medium' : 'hover:bg-zinc-900 text-zinc-300'
+      item.className = `p-2 rounded cursor-pointer transition flex items-center justify-between border-b border-zinc-900/60 last:border-b-0 ${
+        isSelected ? 'bg-emerald-950/40 border-emerald-900/30' : 'hover:bg-zinc-900/80'
       }`;
+
       item.innerHTML = `
-        <div class="truncate flex-1 pr-2">
-          <span class="block truncate">${m.name || m.id}</span>
-          ${m.vendor ? `<span class="text-[9px] text-zinc-500 uppercase font-sans">${m.vendor}</span>` : ''}
+        <div class="min-w-0 flex-1 pr-2 space-y-1">
+          <div class="font-mono text-xs font-medium text-zinc-200 truncate">
+            ${m.id}
+          </div>
+          <div class="flex items-center gap-1.5 flex-wrap text-[10px]">
+            <span class="inline-flex items-center px-1.5 py-0.2 rounded border font-sans font-medium ${origVendor.badge}">
+              ${origVendor.name}
+            </span>
+            ${sellerName ? `
+              <span class="text-zinc-600 font-mono text-[9px]">via</span>
+              <span class="inline-flex items-center px-1.5 py-0.2 rounded bg-zinc-900 border border-zinc-700/60 text-amber-300 font-mono text-[9px]" title="Upstream Tenant / owned_by">
+                ${sellerName}
+              </span>
+            ` : ''}
+          </div>
         </div>
-        ${isSelected ? '<svg class="w-3.5 h-3.5 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>' : ''}
+        ${isSelected ? '<svg class="w-4 h-4 text-emerald-400 shrink-0 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>' : ''}
       `;
 
       item.addEventListener('click', () => {
-        selectModel(m.id, m.name || m.id);
+        selectModel(m.id, m.id);
         closeModelCombobox();
       });
 
@@ -477,7 +557,7 @@ function renderModelOptions(searchTerm = '') {
   }`;
   customItem.innerHTML = `
     <span class="italic text-[11px]">+ Custom Model String...</span>
-    <span class="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400">MANUAL</span>
+    <span class="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-mono">MANUAL</span>
   `;
   customItem.addEventListener('click', () => {
     selectModel('custom', '-- Custom Identity String --');
@@ -766,17 +846,16 @@ async function fetchAvailableModels() {
 
     // Populate Searchable Combobox Catalog
     catalogModels = models.map(m => {
-      const ownerLabel = m.owned_by ? ` [${m.owned_by}]` : '';
       return {
         id: m.id,
-        name: `${m.id}${ownerLabel}`,
-        vendor: m.owned_by || 'Upstream Proxy'
+        name: m.id,
+        seller: m.owned_by || 'Upstream Proxy'
       };
     });
 
     // Select first model and refresh dropdown
     if (catalogModels.length > 0) {
-      selectModel(catalogModels[0].id, catalogModels[0].name);
+      selectModel(catalogModels[0].id, catalogModels[0].id);
     }
     renderModelOptions('');
 
@@ -1017,19 +1096,14 @@ function updateTestRow(testId, status, detailText = null) {
 // FORENSIC REASONING & LAYMAN EVIDENCE ENGINE
 // ----------------------------------------------------
 
-// Model Family Categorization Hierarchy
+// Model Family Categorization Hierarchy (Forensic Reasoning)
 function getModelFamily(modelId = '') {
-  const m = modelId.toLowerCase();
-  if (m.includes('claude')) return { family: 'Anthropic Claude', vendor: 'Anthropic', flagName: 'Claude' };
-  if (m.includes('gpt-4o') || m.includes('4o')) return { family: 'OpenAI GPT-4o', vendor: 'OpenAI', flagName: 'GPT-4o' };
-  if (m.includes('o1') || m.includes('o3')) return { family: 'OpenAI o-Series', vendor: 'OpenAI', flagName: 'o1/o3 Reasoning' };
-  if (m.includes('gpt-4')) return { family: 'OpenAI GPT-4', vendor: 'OpenAI', flagName: 'GPT-4' };
-  if (m.includes('deepseek')) return { family: 'DeepSeek', vendor: 'DeepSeek', flagName: 'DeepSeek' };
-  if (m.includes('llama') || m.includes('meta')) return { family: 'Meta Llama', vendor: 'Meta', flagName: 'Llama' };
-  if (m.includes('gemini')) return { family: 'Google Gemini', vendor: 'Google', flagName: 'Gemini' };
-  if (m.includes('qwen')) return { family: 'Alibaba Qwen', vendor: 'Alibaba', flagName: 'Qwen' };
-  if (m.includes('mistral')) return { family: 'Mistral AI', vendor: 'Mistral', flagName: 'Mistral' };
-  return { family: 'Standard Model', vendor: 'Vendor', flagName: modelId };
+  const orig = detectOriginalVendor(modelId);
+  return {
+    family: orig.name,
+    vendor: orig.name,
+    flagName: orig.name !== 'Foundation Model' ? orig.name : modelId
+  };
 }
 
 // Dynamic Entity & Identity Extractor
