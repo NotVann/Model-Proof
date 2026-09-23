@@ -781,28 +781,40 @@ async function callModel({ messages, stream = false, maxTokens = 500, temperatur
 
   if (state.corsProxy) endpoint = state.corsProxy + endpoint;
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout safety
+
   const startTime = performance.now();
   let res;
 
   try {
-    res = await fetch(endpoint, {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify(body)
-    });
-  } catch (fetchErr) {
-    // Automatic fallback to local server proxy if on localhost
-    if ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && !state.corsProxy) {
-      appendLog('[CORS Auto-Bypass] Direct browser call blocked by target nginx. Routing via local relay...', 'warn');
-      const relayEndpoint = `/api/proxy?url=${encodeURIComponent(endpoint)}`;
-      res = await fetch(relayEndpoint, {
+    try {
+      res = await fetch(endpoint, {
         method: 'POST',
         headers: headers,
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        signal: controller.signal
       });
-    } else {
-      throw new Error(`CORS Blocked: Target server nginx has no Access-Control-Allow-Origin header. Use CORS Relay!`);
+    } catch (fetchErr) {
+      if (controller.signal.aborted) {
+        throw new Error('Request timeout after 15s');
+      }
+      // Automatic fallback to local server proxy if on localhost
+      if ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && !state.corsProxy) {
+        appendLog('[CORS Auto-Bypass] Direct browser call blocked by target nginx. Routing via local relay...', 'warn');
+        const relayEndpoint = `/api/proxy?url=${encodeURIComponent(endpoint)}`;
+        res = await fetch(relayEndpoint, {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify(body),
+          signal: controller.signal
+        });
+      } else {
+        throw new Error(`CORS Blocked: Target server nginx has no Access-Control-Allow-Origin header. Use CORS Relay!`);
+      }
     }
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   if (!res.ok) {
@@ -1501,20 +1513,25 @@ async function startAudit() {
 
   // Reset UI
   state.selectedTests.forEach(id => updateTestRow(id, 'PENDING'));
-  el.verdictScore.textContent = '--%';
-  el.verdictBadge.textContent = 'AUDITING';
-  el.verdictBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 uppercase inline-block';
-  el.auditTargetDisplay.textContent = `${state.claimedModel} @ ${state.baseUrl || 'Default'}`;
+  if (el.verdictScore) el.verdictScore.textContent = '--%';
+  if (el.verdictBadge) {
+    el.verdictBadge.textContent = 'AUDITING';
+    el.verdictBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 uppercase inline-block';
+  }
+  if (el.auditTargetDisplay) el.auditTargetDisplay.textContent = `${state.claimedModel} @ ${state.baseUrl || 'Default'}`;
 
   // Reset Layman UI
-  el.laymanSummaryCard.className = 'panel rounded-lg p-4 space-y-3.5 border-l-4 border-l-cyan-600 transition-all duration-300';
-  el.laymanStatusBadge.className = 'font-mono text-xs font-bold px-2.5 py-0.5 rounded uppercase tracking-wider bg-cyan-950 text-cyan-300 border border-cyan-800';
-  el.laymanStatusBadge.textContent = 'SEDANG MEMERIKSA...';
-  el.laymanHeadline.textContent = `Memeriksa Sidik Jari Model ${state.claimedModel}...`;
-  el.laymanSubtext.textContent = 'Mengirim rangkaian tes logika, identitas, tokenizer, dan arsitektur untuk memvalidasi keaslian model...';
-  el.laymanRiskPill.textContent = 'STATUS: AUDITING';
-  el.laymanEvidenceContainer.classList.add('hidden');
-  el.btnCopyComplaint.classList.add('hidden');
+  if (el.laymanSummaryCard) {
+    el.laymanSummaryCard.className = 'panel rounded-lg p-4 space-y-3.5 border-l-4 border-l-cyan-600 transition-all duration-300';
+    el.laymanStatusBadge.className = 'font-mono text-xs font-bold px-2.5 py-0.5 rounded uppercase tracking-wider bg-cyan-950 text-cyan-300 border border-cyan-800';
+    el.laymanStatusBadge.textContent = 'SEDANG MEMERIKSA...';
+    el.laymanHeadline.textContent = `Memeriksa Sidik Jari Model ${state.claimedModel}...`;
+    el.laymanSubtext.textContent = 'Mengirim rangkaian tes logika, identitas, tokenizer, dan arsitektur untuk memvalidasi keaslian model...';
+    el.laymanRiskPill.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 uppercase';
+    el.laymanRiskPill.textContent = 'STATUS: AUDITING';
+    el.laymanEvidenceContainer.classList.add('hidden');
+    el.btnCopyComplaint.classList.add('hidden');
+  }
 
   appendLog(`=== Starting Modular Audit: ${state.selectedTests.length} Vectors on [${state.claimedModel}] ===`, 'highlight');
 
@@ -1538,21 +1555,27 @@ async function startAudit() {
     el.verdictScore.textContent = `${percentage}%`;
 
     if (percentage >= 80) {
-      el.verdictScore.className = 'text-2xl font-bold font-mono text-emerald-400';
-      el.verdictBadge.textContent = 'LIKELY GENUINE';
-      el.verdictBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 uppercase inline-block';
+      if (el.verdictScore) el.verdictScore.className = 'font-mono text-xs text-emerald-400 font-semibold';
+      if (el.verdictBadge) {
+        el.verdictBadge.textContent = 'LIKELY GENUINE';
+        el.verdictBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 uppercase inline-block';
+      }
       appendLog(`[Audit Verdict] Score: ${percentage}% -> Confirmed genuine model signature.`, 'success');
       showToast(`Scan complete: Model verified genuine with ${percentage}% confidence score.`, 'success');
     } else if (percentage >= 50) {
-      el.verdictScore.className = 'text-2xl font-bold font-mono text-yellow-400';
-      el.verdictBadge.textContent = 'SUSPICIOUS / DOWNGRADED';
-      el.verdictBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-yellow-950 text-yellow-400 border border-yellow-800 uppercase inline-block';
+      if (el.verdictScore) el.verdictScore.className = 'font-mono text-xs text-yellow-400 font-semibold';
+      if (el.verdictBadge) {
+        el.verdictBadge.textContent = 'SUSPICIOUS / DOWNGRADED';
+        el.verdictBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-yellow-950 text-yellow-400 border border-yellow-800 uppercase inline-block';
+      }
       appendLog(`[Audit Verdict] Score: ${percentage}% -> Behavioral anomalies. Suspected downgrade proxy.`, 'warn');
       showToast(`Warning: Target exhibit behavioral anomalies (${percentage}% score). Suspected downgrade.`, 'warn');
     } else {
-      el.verdictScore.className = 'text-2xl font-bold font-mono text-rose-400';
-      el.verdictBadge.textContent = 'CONFIRMED MASKED / FAKE';
-      el.verdictBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-rose-950 text-rose-400 border border-rose-800 uppercase inline-block';
+      if (el.verdictScore) el.verdictScore.className = 'font-mono text-xs text-rose-400 font-semibold';
+      if (el.verdictBadge) {
+        el.verdictBadge.textContent = 'CONFIRMED MASKED / FAKE';
+        el.verdictBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-rose-950 text-rose-400 border border-rose-800 uppercase inline-block';
+      }
       appendLog(`[Audit Verdict] Score: ${percentage}% -> Severe failure across fingerprint vectors. Model is FAKE.`, 'error');
       showToast(`Critical: Severe fingerprint mismatches (${percentage}%). Model confirmed spoofed.`, 'error');
     }
