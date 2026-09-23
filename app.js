@@ -117,21 +117,21 @@ const el = {
   suiteProgressText: document.getElementById('suite-progress-text')
 };
 
-// Render Checkboxes
+// Render Checkboxes with Refined Design
 function renderTestCheckboxes() {
   el.testCheckboxesContainer.innerHTML = '';
   TEST_REGISTRY.forEach(t => {
     const isChecked = state.selectedTests.includes(t.id);
     const item = document.createElement('label');
-    item.className = 'flex items-start gap-2.5 p-2 rounded-lg bg-gray-900/60 border border-gray-800/80 hover:border-gray-700 cursor-pointer transition';
+    item.className = 'flex items-start gap-2.5 p-2 rounded bg-zinc-950/50 border border-zinc-800/60 hover:border-zinc-700/80 cursor-pointer transition';
     item.innerHTML = `
-      <input type="checkbox" value="${t.id}" ${isChecked ? 'checked' : ''} class="test-checkbox mt-0.5 rounded bg-gray-950 border-gray-700 text-emerald-500 focus:ring-0">
+      <input type="checkbox" value="${t.id}" ${isChecked ? 'checked' : ''} class="test-checkbox mt-0.5 rounded-sm bg-zinc-900 border-zinc-700 text-emerald-500 focus:ring-0 focus:ring-offset-0 cursor-pointer">
       <div class="space-y-0.5 flex-1 select-none">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-medium text-gray-200">${t.id}. ${t.name}</span>
-          ${t.quick ? '<span class="text-[9px] px-1 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 font-mono">FAST</span>' : '<span class="text-[9px] px-1 rounded bg-purple-950 text-purple-400 border border-purple-800 font-mono">DEEP</span>'}
+          <span class="text-xs font-mono font-medium text-zinc-300">${String(t.id).padStart(2, '0')}. ${t.name}</span>
+          ${t.quick ? '<span class="text-[9px] px-1.5 py-0.2 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 font-mono">FAST</span>' : '<span class="text-[9px] px-1.5 py-0.2 rounded bg-zinc-900 text-purple-400 border border-purple-900/40 font-mono">DEEP</span>'}
         </div>
-        <p class="text-[10px] text-gray-400">${t.desc}</p>
+        <p class="text-[11px] text-zinc-500 font-sans leading-tight">${t.desc}</p>
       </div>
     `;
 
@@ -151,13 +151,13 @@ function renderTestCheckboxes() {
   });
 }
 
-// Render Pipeline Rows
+// Render Pipeline Rows with Sleek Card Look
 function renderPipelineRows() {
   el.testPipelineContainer.innerHTML = '';
   const activeTests = TEST_REGISTRY.filter(t => state.selectedTests.includes(t.id));
   
   if (activeTests.length === 0) {
-    el.testPipelineContainer.innerHTML = '<div class="text-xs text-gray-500 italic p-3 text-center">No tests selected. Check at least 1 vector on the left.</div>';
+    el.testPipelineContainer.innerHTML = '<div class="text-xs text-zinc-500 font-mono italic p-4 text-center">No vectors selected. Enable at least 1 vector on the left panel.</div>';
     el.suiteProgressText.textContent = '0/0 Selected';
     return;
   }
@@ -167,16 +167,16 @@ function renderPipelineRows() {
   activeTests.forEach(t => {
     const row = document.createElement('div');
     row.id = `test-row-${t.id}`;
-    row.className = 'p-2.5 rounded-lg bg-gray-900/70 border border-gray-800/80 flex items-start justify-between gap-3';
+    row.className = 'p-2.5 rounded bg-zinc-950/60 border border-zinc-800/60 flex items-start justify-between gap-3 transition';
     row.innerHTML = `
       <div class="space-y-0.5">
         <div class="flex items-center gap-2">
-          <span class="test-icon text-xs text-gray-500"><i class="fa-regular fa-circle"></i></span>
-          <span class="text-xs font-medium text-gray-200">${t.id}. ${t.name}</span>
+          <span class="test-icon text-xs text-zinc-600 font-mono"><i class="fa-regular fa-circle"></i></span>
+          <span class="text-xs font-mono font-medium text-zinc-300">${String(t.id).padStart(2, '0')}. ${t.name}</span>
         </div>
-        <p class="text-[11px] text-gray-400 test-detail">${t.desc}</p>
+        <p class="text-[11px] text-zinc-500 test-detail font-sans">${t.desc}</p>
       </div>
-      <span class="test-status font-mono text-[10px] px-2 py-0.5 rounded bg-gray-950 text-gray-500 border border-gray-800 uppercase">PENDING</span>
+      <span class="test-status font-mono text-[10px] px-2 py-0.5 rounded bg-zinc-900 text-zinc-500 border border-zinc-800 uppercase tracking-wider">PENDING</span>
     `;
     el.testPipelineContainer.appendChild(row);
   });
