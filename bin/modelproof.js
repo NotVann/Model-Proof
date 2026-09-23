@@ -153,6 +153,24 @@ function detectOriginalVendor(modelId = '') {
   return { name: 'Foundation Model', family: 'Standard Model' };
 }
 
+// Known Patterns for Fictional / Spoofed / Unreleased Models
+const FAKE_MODEL_PATTERNS = [
+  { regex: /gpt-*(5\.[1-9]|6|7|o[2-9])/i, reason: 'Fictional/Unreleased OpenAI GPT Model' },
+  { regex: /claude.*(4-5|4\.5|5|opus-5|sonnet-4-5|sonnet-4$)/i, reason: 'Fictional/Unreleased Anthropic Model' },
+  { regex: /deepseek.*(3\.[2-9]|v4|r2)/i, reason: 'Fictional DeepSeek Model' },
+  { regex: /grok.*(4-5|5)/i, reason: 'Fictional xAI Grok Model' },
+  { regex: /glm-5/i, reason: 'Unreleased GLM Model' },
+  { regex: /astra|turbo-max|ultra-max|custom|hack|shared|proxy/i, reason: 'Reseller-Branded / Spoofed Suffix' }
+];
+
+function checkFakeModelPattern(modelId = '') {
+  if (!modelId) return null;
+  for (const p of FAKE_MODEL_PATTERNS) {
+    if (p.regex.test(modelId)) return p;
+  }
+  return null;
+}
+
 // HTTP Caller
 async function callModel(opts, { messages, stream = false, maxTokens = 400, temperature = 0.0, responseFormat = null }) {
   const activeProto = opts.activeProto || 'openai';
@@ -540,11 +558,9 @@ async function main() {
       const rawModels = data.data || [];
       const flagged = [];
       const tenants = new Set();
-      const FAKE_REGEX = /claude.*(4-5|4\.5|5|opus-5|sonnet-4-5)|deepseek.*(3\.[2-9]|v4)|grok.*(4-5|5)|glm-5|arza|mod/i;
-      
       const parsedModels = rawModels.map(m => {
         const id = m.id || '';
-        if (FAKE_REGEX.test(id)) flagged.push(id);
+        if (checkFakeModelPattern(id)) flagged.push(id);
         if (m.owned_by && !['openai', 'anthropic', 'system', 'google', 'meta', 'deepseek'].includes(m.owned_by.toLowerCase())) {
           tenants.add(m.owned_by);
         }
@@ -634,21 +650,27 @@ async function main() {
     }
   }
 
-  const finalScore = Math.round((totalScore / VECTORS.length) * 100);
+  const capabilityScore = Math.round((totalScore / VECTORS.length) * 100);
   const origVendor = detectOriginalVendor(opts.model);
+  const targetFake = checkFakeModelPattern(opts.model);
+  const hasFakeCatalog = catalogResult.flagged.length > 0;
 
-  let verdictLevel = 'genuine';
-  let exitCode = 0;
+  let verdictLevel = 'fake';
+  let exitCode = 1;
+  let authenticityScore = capabilityScore;
 
-  if (finalScore >= 80 && !hasCriticalFailure) {
-    verdictLevel = 'genuine';
-    exitCode = 0;
-  } else if (finalScore >= 50 && !hasCriticalFailure) {
+  if (targetFake || hasCriticalFailure || (hasFakeCatalog && capabilityScore < 85)) {
+    verdictLevel = 'fake';
+    authenticityScore = Math.min(30, Math.max(0, capabilityScore - (targetFake ? 70 : 40) - (hasCriticalFailure ? 50 : 0)));
+    exitCode = 1;
+  } else if (hasFakeCatalog || capabilityScore < 80) {
     verdictLevel = 'suspicious';
+    authenticityScore = Math.min(65, Math.max(0, capabilityScore - 25));
     exitCode = 1;
   } else {
-    verdictLevel = 'fake';
-    exitCode = 1;
+    verdictLevel = 'genuine';
+    authenticityScore = capabilityScore;
+    exitCode = 0;
   }
 
   if (opts.json) {
@@ -657,10 +679,13 @@ async function main() {
       target: {
         model: opts.model,
         baseUrl: opts.baseUrl,
-        detectedOriginalVendor: origVendor.name
+        detectedOriginalVendor: origVendor.name,
+        isFictionalModel: Boolean(targetFake)
       },
       audit: {
-        score: finalScore,
+        score: authenticityScore,
+        authenticityScore,
+        capabilityScore,
         verdict: verdictLevel.toUpperCase(),
         hasCriticalFailure,
         catalog: catalogResult,
@@ -689,7 +714,10 @@ async function main() {
     riskText = isEn ? 'FRAUD / FAKED' : 'PENIPUAN (FAKED)';
   }
 
-  console.log(` ${isEn ? 'AUTHENTICITY SCORE' : 'SKOR KEASLIAN'}   : ${c.bold}${verdictColor}${finalScore}%${c.reset}`);
+  console.log(` ${isEn ? 'AUTHENTICITY SCORE' : 'SKOR KEASLIAN'}   : ${c.bold}${verdictColor}${authenticityScore}%${c.reset}`);
+  if (authenticityScore !== capabilityScore) {
+    console.log(` ${isEn ? 'CAPABILITY SCORE' : 'KEMAMPUAN TEKNIS'}  : ${c.bold}${capabilityScore}%${c.reset} ${c.dim}(${isEn ? 'Underlying Model Passed Vectors' : 'Model di balik proxy lolos uji'})`);
+  }
   console.log(` ${isEn ? 'VERDICT' : 'HASIL DIAGNOSTIK'}   : ${c.bold}${verdictColor}${verdictText}${c.reset}`);
   console.log(` ${isEn ? 'DETECTED VENDOR' : 'VENDOR ASLI'}    : ${origVendor.family}`);
   if (catalogResult.tenant) {

@@ -671,6 +671,24 @@ function detectOriginalVendor(modelId = '') {
   return { name: 'Foundation Model', badge: 'bg-zinc-900 text-zinc-400 border-zinc-800' };
 }
 
+// Known Patterns for Fictional / Spoofed / Unreleased Models
+const FAKE_MODEL_PATTERNS = [
+  { regex: /gpt-*(5\.[1-9]|6|7|o[2-9])/i, reason: 'Fictional/Unreleased OpenAI GPT Model' },
+  { regex: /claude.*(4-5|4\.5|5|opus-5|sonnet-4-5|sonnet-4$)/i, reason: 'Fictional/Unreleased Anthropic Model' },
+  { regex: /deepseek.*(3\.[2-9]|v4|r2)/i, reason: 'Fictional DeepSeek Model' },
+  { regex: /grok.*(4-5|5)/i, reason: 'Fictional xAI Grok Model' },
+  { regex: /glm-5/i, reason: 'Unreleased GLM Model' },
+  { regex: /astra|turbo-max|ultra-max|custom|hack|shared|proxy/i, reason: 'Reseller-Branded / Spoofed Suffix' }
+];
+
+function checkFakeModelPattern(modelId = '') {
+  if (!modelId) return null;
+  for (const p of FAKE_MODEL_PATTERNS) {
+    if (p.regex.test(modelId)) return p;
+  }
+  return null;
+}
+
 // Model Catalog State for Searchable Combobox
 const DEFAULT_PRESET_MODELS = [
   { id: 'claude-3-5-sonnet-20241022', name: 'claude-3-5-sonnet-20241022', seller: 'Official' },
@@ -1070,21 +1088,11 @@ async function fetchAvailableModels() {
     const flagged = [];
     const customOwners = new Set();
 
-    const FAKE_PATTERNS = [
-      { regex: /claude.*(4-5|4\.5|5|opus-5|sonnet-4-5|sonnet-4$)/i, reason: 'Fictional/Unreleased Anthropic Model' },
-      { regex: /deepseek.*(3\.[2-9]|v4)/i, reason: 'Fictional DeepSeek Model' },
-      { regex: /grok.*(4-5|5)/i, reason: 'Fictional xAI Grok Model' },
-      { regex: /glm-5/i, reason: 'Unreleased GLM Model' },
-      { regex: /arza|mod|custom|hack|shared/i, reason: 'Custom Reseller-Branded String' }
-    ];
-
     models.forEach(m => {
       const id = m.id || '';
-      for (const p of FAKE_PATTERNS) {
-        if (p.regex.test(id)) {
-          flagged.push({ id, reason: p.reason });
-          break;
-        }
+      const fake = checkFakeModelPattern(id);
+      if (fake) {
+        flagged.push({ id, reason: fake.reason });
       }
       if (m.owned_by && !['openai', 'anthropic', 'system', 'google', 'meta', 'deepseek', 'mistral'].includes(m.owned_by.toLowerCase())) {
         customOwners.add(m.owned_by);
@@ -1397,18 +1405,21 @@ function extractIdentityEntity(text = '') {
 }
 
 // Render Plain-Language Executive Summary for Layman Users
-function renderLaymanSummary(scorePercentage, results) {
+function renderLaymanSummary(capabilityPercentage, results) {
   const familyInfo = getModelFamily(state.claimedModel);
   const findings = auditState.findings || [];
+  const isEn = state.lang === 'en';
   
   // Also collect catalog findings if any
-  if (auditState.flaggedCatalogModels.length > 0) {
+  if (auditState.flaggedCatalogModels && auditState.flaggedCatalogModels.length > 0) {
     const fakeNames = auditState.flaggedCatalogModels.map(f => f.id).join(', ');
     findings.push({
       category: 'catalog',
       severity: 'critical',
-      headline: 'Katalog API Penjual Memuat Model Palsu/Fiktif',
-      desc: `Daftar model upstream memuat model fiktif yang tidak pernah dirilis resmi: [${fakeNames}]. Ini indikasi kuat reseller memanipulasi penamaan.`
+      headline: isEn ? 'Reseller Catalog Contains Fictional Models' : 'Katalog API Penjual Memuat Model Palsu/Fiktif',
+      desc: isEn
+        ? `Upstream model list advertises unreleased/fictional models: [${fakeNames}]. Strong evidence of proxy name spoofing.`
+        : `Daftar model upstream memuat model fiktif yang tidak pernah dirilis resmi: [${fakeNames}]. Ini indikasi kuat reseller memanipulasi penamaan.`
     });
   }
 
@@ -1422,28 +1433,61 @@ function renderLaymanSummary(scorePercentage, results) {
     }
   });
 
+  const critCount = uniqueFindings.filter(f => f.severity === 'critical').length;
+  const warnCount = uniqueFindings.filter(f => f.severity === 'warning').length;
+
   // Calculate Verdict Level
   let verdictLevel = 'fake'; // 'fake' | 'suspicious' | 'genuine'
-  if (scorePercentage >= 80 && uniqueFindings.filter(f => f.severity === 'critical').length === 0) {
+  if (capabilityPercentage >= 80 && critCount === 0 && warnCount === 0) {
     verdictLevel = 'genuine';
-  } else if (scorePercentage >= 50 && uniqueFindings.filter(f => f.severity === 'critical').length === 0) {
+  } else if (capabilityPercentage >= 50 && critCount === 0) {
     verdictLevel = 'suspicious';
   } else {
     verdictLevel = 'fake';
   }
 
+  // Calculate Penalized Authenticity Score
+  let authenticityScore = capabilityPercentage;
+  if (verdictLevel === 'fake') {
+    authenticityScore = Math.max(0, capabilityPercentage - (critCount * 35));
+    authenticityScore = Math.min(authenticityScore, 30);
+  } else if (verdictLevel === 'suspicious') {
+    authenticityScore = Math.max(0, capabilityPercentage - (warnCount * 15 || 25));
+    authenticityScore = Math.min(authenticityScore, 65);
+  }
+
   auditState.lastVerdict = {
     verdictLevel,
-    scorePercentage,
+    authenticityScore,
+    scorePercentage: authenticityScore,
+    capabilityPercentage,
     claimedModel: state.claimedModel,
     familyInfo,
     findings: uniqueFindings,
     baseUrl: state.baseUrl
   };
 
-  const isEn = state.lang === 'en';
+  // Synchronize Technical Header Badge & Score
+  if (el.verdictScore) {
+    el.verdictScore.textContent = `${authenticityScore}%`;
+  }
+  if (el.verdictBadge) {
+    if (verdictLevel === 'genuine') {
+      el.verdictBadge.textContent = isEn ? 'LIKELY GENUINE' : 'TERVERIFIKASI ASLI';
+      el.verdictBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 uppercase inline-block';
+      if (el.verdictScore) el.verdictScore.className = 'font-mono text-xs text-emerald-400 font-semibold';
+    } else if (verdictLevel === 'suspicious') {
+      el.verdictBadge.textContent = isEn ? 'SUSPICIOUS / DOWNGRADED' : 'MENCURIGAKAN';
+      el.verdictBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-yellow-950 text-yellow-400 border border-yellow-800 uppercase inline-block';
+      if (el.verdictScore) el.verdictScore.className = 'font-mono text-xs text-yellow-400 font-semibold';
+    } else {
+      el.verdictBadge.textContent = isEn ? 'CONFIRMED MASKED / FAKE' : 'PALSU / HASIL MASKING';
+      el.verdictBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-rose-950 text-rose-400 border border-rose-800 uppercase inline-block';
+      if (el.verdictScore) el.verdictScore.className = 'font-mono text-xs text-rose-400 font-semibold';
+    }
+  }
 
-  // Render UI Components
+  // Render Layman UI Components
   if (verdictLevel === 'genuine') {
     el.laymanSummaryCard.className = 'panel rounded-lg p-4 space-y-3.5 border-l-4 border-l-emerald-500 transition-all duration-300 bg-emerald-950/10';
     el.laymanStatusBadge.className = 'font-mono text-xs font-bold px-2.5 py-0.5 rounded uppercase tracking-wider bg-emerald-950 text-emerald-300 border border-emerald-800';
@@ -1477,13 +1521,24 @@ function renderLaymanSummary(scorePercentage, results) {
     el.laymanSummaryCard.className = 'panel rounded-lg p-4 space-y-3.5 border-l-4 border-l-rose-500 transition-all duration-300 bg-rose-950/15';
     el.laymanStatusBadge.className = 'font-mono text-xs font-bold px-2.5 py-0.5 rounded uppercase tracking-wider bg-rose-950 text-rose-300 border border-rose-800';
     el.laymanStatusBadge.textContent = isEn ? 'CONFIRMED SPOOFED / MASKED' : 'PALSU / HASIL MASKING (SPOOFED)';
-    el.laymanHeadline.textContent = isEn 
-      ? `Target is NOT Genuine ${familyInfo.flagName}!` 
-      : `Model Ini BUKAN ${familyInfo.flagName} Asli!`;
-    el.laymanHeadline.className = 'text-sm sm:text-base font-semibold text-rose-300 leading-snug';
-    el.laymanSubtext.textContent = isEn 
-      ? `Severe identity mismatches and reverse proxy masking detected. Upstream provider wraps a cheaper model under the label ${state.claimedModel}.` 
-      : `Ditemukan ketidakcocokan identitas dan rekayasa proxy. Penjual membungkus model murah/lain menggunakan label nama ${state.claimedModel}.`;
+    
+    // Distinguish if model capability passed but identity/catalog is fake
+    if (capabilityPercentage >= 70 && critCount > 0) {
+      el.laymanHeadline.textContent = isEn
+        ? `High Reasoning Ability, But Model Identity / Catalog Is Fictitious`
+        : `Lolos Uji Logika, Namun Identitas Model / Katalog Terbukti Rekayasa`;
+      el.laymanSubtext.textContent = isEn
+        ? `Upstream LLM solved forensic capability vectors (${capabilityPercentage}% capability), but '${state.claimedModel}' is an unofficial/manipulated proxy label. Endpoint does NOT provide original weights.`
+        : `Model di balik proxy mampu menjawab uji nalar (${capabilityPercentage}% kemampuan), namun nama '${state.claimedModel}' terbukti fiktif/rekayasa reseller. Endpoint ini BUKAN endpoint resmi model tersebut.`;
+    } else {
+      el.laymanHeadline.textContent = isEn 
+        ? `Target is NOT Genuine ${familyInfo.flagName}!` 
+        : `Model Ini BUKAN ${familyInfo.flagName} Asli!`;
+      el.laymanSubtext.textContent = isEn 
+        ? `Severe identity mismatches and reverse proxy masking detected. Upstream provider wraps a cheaper model under the label ${state.claimedModel}.` 
+        : `Ditemukan ketidakcocokan identitas dan rekayasa proxy. Penjual membungkus model murah/lain menggunakan label nama ${state.claimedModel}.`;
+    }
+
     el.laymanRiskPill.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-rose-900/70 text-rose-200 border border-rose-700 uppercase font-semibold';
     el.laymanRiskPill.textContent = isEn ? 'RISK: FRAUD / FAKED' : 'RISIKO: PENIPUAN (FAKED)';
     el.btnCopyComplaint.classList.remove('hidden');
@@ -1535,40 +1590,48 @@ function copyComplaintDraft() {
     evidenceBullets = v.findings.map((f, i) => `${i + 1}. [${f.headline}]\n   Detail: ${f.desc}`).join('\n\n');
   } else {
     evidenceBullets = isEn 
-      ? `- Architecture similarity score is only ${v.scorePercentage}% (Failed integrity benchmark).`
-      : `- Skor kecocokan arsitektur hanya ${v.scorePercentage}% (Gagal uji integritas model).`;
+      ? `- Architecture similarity score is only ${v.authenticityScore}% (Failed integrity benchmark).`
+      : `- Skor kecocokan arsitektur hanya ${v.authenticityScore}% (Gagal uji integritas model).`;
   }
 
   let complaintText = '';
 
   if (isEn) {
+    const scoreBreakdown = v.capabilityPercentage !== undefined && v.capabilityPercentage !== v.authenticityScore
+      ? `- Forensic Verdict: ${v.verdictLevel.toUpperCase()}\n- Authenticity Score: ${v.authenticityScore}% (Identity Integrity & Catalog Validation)\n- Reasoning Capability Score: ${v.capabilityPercentage}% (Underlying Inference Execution)`
+      : `- Forensic Verdict: ${v.verdictLevel.toUpperCase()} (Authenticity Score: ${v.authenticityScore}%)`;
+
     complaintText = `Hi admin, I would like to dispute the API key purchased.
 
 After conducting a technical forensic audit via AI Model Mask Checker on:
 - Audit Timestamp: ${timestamp}
 - Base URL: ${v.baseUrl || 'Provider Endpoint'}
 - Target Model: ${v.claimedModel}
-- Forensic Verdict: ${v.verdictLevel.toUpperCase()} (Authenticity Score: ${v.scorePercentage}%)
+${scoreBreakdown}
 
 Technical Forensic Evidence indicating model spoofing/downgrading:
 
 ${evidenceBullets}
 
-Based on the evidence above, the endpoint does NOT provide original ${v.familyInfo.family} weights. Please provide a valid original endpoint or process a refund. Thank you!`;
+Based on the evidence above, the endpoint does NOT provide original ${v.familyInfo.family} weights. Even if the underlying model responds to queries, the sold model label is fictitious / spoofed. Please provide a valid original endpoint or process a refund. Thank you!`;
   } else {
+    const scoreBreakdown = v.capabilityPercentage !== undefined && v.capabilityPercentage !== v.authenticityScore
+      ? `- Status Hasil Audit: ${v.verdictLevel.toUpperCase()}\n- Skor Keaslian (Authenticity): ${v.authenticityScore}% (Gagal Validasi Integritas Nama/Katalog)\n- Skor Kemampuan Nalar (Capability): ${v.capabilityPercentage}% (Model dialihkan ke model lain / proxy routing)`
+      : `- Status Hasil Audit: ${v.verdictLevel.toUpperCase()} (Skor Keaslian: ${v.authenticityScore}%)`;
+
     complaintText = `Halo admin, mohon maaf mau komplain perihal API Key yang saya beli.
 
 Setelah saya lakukan audit forensik teknis menggunakan AI Model Mask Checker pada:
 - Waktu Audit: ${timestamp}
 - Base URL: ${v.baseUrl || 'Endpoint penjual'}
 - Model yang dibeli/dites: ${v.claimedModel}
-- Status Hasil Audit: ${v.verdictLevel.toUpperCase()} (Skor Keaslian: ${v.scorePercentage}%)
+${scoreBreakdown}
 
 Berikut bukti temuan forensik bahwa model ini di-masking / tidak sesuai dengan model aslinya:
 
 ${evidenceBullets}
 
-Berdasarkan bukti di atas, model yang disediakan di proxy ini bukan ${v.familyInfo.family} original. Mohon untuk diganti dengan endpoint resmi yang valid atau proses refund dana saya ya. Terima kasih!`;
+Berdasarkan bukti forensik di atas, model yang disediakan di proxy ini bukan ${v.familyInfo.family} resmi. Meskipun respons dapat dijawab, label model '${v.claimedModel}' yang diperjualbelikan adalah hasil rekayasa/masking proxy. Mohon untuk diganti dengan endpoint resmi yang valid atau proses refund dana saya ya. Terima kasih!`;
   }
 
   navigator.clipboard.writeText(complaintText).then(() => {
@@ -2189,6 +2252,22 @@ async function startAudit() {
 
   state.isRunning = true;
   auditState.findings = []; // Reset findings for clean audit run
+  auditState.identifiedEntities = [];
+
+  // Pre-audit Check: Target model against known fictional/reseller patterns
+  const targetFake = checkFakeModelPattern(state.claimedModel);
+  if (targetFake) {
+    const isEn = state.lang === 'en';
+    auditState.findings.push({
+      category: 'target_identity',
+      severity: 'critical',
+      headline: isEn ? 'Target Model is Fictional / Reseller Spoof' : 'Model Target Merupakan Nama Fiktif / Rekayasa Reseller',
+      desc: isEn
+        ? `The model identifier '${state.claimedModel}' has never been officially released (${targetFake.reason}). Reseller invented this model name to mask an underlying proxy routing.`
+        : `Label model '${state.claimedModel}' tidak pernah dirilis secara resmi (${targetFake.reason}). Penjual merekayasa penamaan ini untuk memanipulasi routing proxy.`
+    });
+  }
+
   el.btnStartAudit.disabled = true;
   el.btnStartAudit.innerHTML = `
     <svg class="w-4 h-4 text-zinc-950 animate-spin-fast shrink-0" viewBox="0 0 50 50">
@@ -2249,38 +2328,22 @@ async function startAudit() {
     }
 
     const totalScore = testResults.reduce((acc, curr) => acc + curr.score, 0);
-    const percentage = Math.round((totalScore / testResults.length) * 100);
+    const capabilityPercentage = Math.round((totalScore / testResults.length) * 100);
 
-    el.verdictScore.textContent = `${percentage}%`;
+    // Render Plain-Language Executive Summary for Layman Users (also updates header badge & authenticity score)
+    renderLaymanSummary(capabilityPercentage, testResults);
 
-    if (percentage >= 80) {
-      if (el.verdictScore) el.verdictScore.className = 'font-mono text-xs text-emerald-400 font-semibold';
-      if (el.verdictBadge) {
-        el.verdictBadge.textContent = 'LIKELY GENUINE';
-        el.verdictBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 uppercase inline-block';
-      }
-      appendLog(`[Audit Verdict] Score: ${percentage}% -> Confirmed genuine model signature.`, 'success');
-      showToast(`Scan complete: Model verified genuine with ${percentage}% confidence score.`, 'success');
-    } else if (percentage >= 50) {
-      if (el.verdictScore) el.verdictScore.className = 'font-mono text-xs text-yellow-400 font-semibold';
-      if (el.verdictBadge) {
-        el.verdictBadge.textContent = 'SUSPICIOUS / DOWNGRADED';
-        el.verdictBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-yellow-950 text-yellow-400 border border-yellow-800 uppercase inline-block';
-      }
-      appendLog(`[Audit Verdict] Score: ${percentage}% -> Behavioral anomalies. Suspected downgrade proxy.`, 'warn');
-      showToast(`Warning: Target exhibit behavioral anomalies (${percentage}% score). Suspected downgrade.`, 'warn');
+    const v = auditState.lastVerdict;
+    if (v.verdictLevel === 'genuine') {
+      appendLog(`[Audit Verdict] Authenticity: ${v.authenticityScore}% | Capability: ${v.capabilityPercentage}% -> Verified genuine model.`, 'success');
+      showToast(state.lang === 'en' ? `Scan complete: Model verified genuine with ${v.authenticityScore}% confidence.` : `Audit selesai: Model terverifikasi asli (Skor ${v.authenticityScore}%).`, 'success');
+    } else if (v.verdictLevel === 'suspicious') {
+      appendLog(`[Audit Verdict] Authenticity: ${v.authenticityScore}% | Capability: ${v.capabilityPercentage}% -> Suspected downgrade/anomalies.`, 'warn');
+      showToast(state.lang === 'en' ? `Warning: Anomalies detected (${v.authenticityScore}% authenticity). Suspected downgrade.` : `Peringatan: Anomali terdeteksi (Skor Keaslian ${v.authenticityScore}%). Diduga downgrade.`, 'warn');
     } else {
-      if (el.verdictScore) el.verdictScore.className = 'font-mono text-xs text-rose-400 font-semibold';
-      if (el.verdictBadge) {
-        el.verdictBadge.textContent = 'CONFIRMED MASKED / FAKE';
-        el.verdictBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-rose-950 text-rose-400 border border-rose-800 uppercase inline-block';
-      }
-      appendLog(`[Audit Verdict] Score: ${percentage}% -> Severe failure across fingerprint vectors. Model is FAKE.`, 'error');
-      showToast(`Critical: Severe fingerprint mismatches (${percentage}%). Model confirmed spoofed.`, 'error');
+      appendLog(`[Audit Verdict] Authenticity: ${v.authenticityScore}% | Capability: ${v.capabilityPercentage}% -> Severe identity/spoof mismatch. Model is FAKE.`, 'error');
+      showToast(state.lang === 'en' ? `Critical: Model confirmed spoofed / masked (${v.authenticityScore}% authenticity).` : `Kritis: Model terkonfirmasi palsu / masking (Skor Keaslian ${v.authenticityScore}%).`, 'error');
     }
-
-    // Render Plain-Language Executive Summary for Layman Users
-    renderLaymanSummary(percentage, testResults);
 
   } catch (err) {
     appendLog(`Audit interrupted: ${err.message}`, 'error');

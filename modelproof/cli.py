@@ -72,6 +72,26 @@ def detect_vendor(model_id: str):
     return {"name": "Foundation Model", "family": "Standard Model"}
 
 
+# Known Patterns for Fictional / Spoofed / Unreleased Models
+FAKE_MODEL_PATTERNS = [
+    (re.compile(r"gpt-*(5\.[1-9]|6|7|o[2-9])", re.I), "Fictional/Unreleased OpenAI GPT Model"),
+    (re.compile(r"claude.*(4-5|4\.5|5|opus-5|sonnet-4-5|sonnet-4$)", re.I), "Fictional/Unreleased Anthropic Model"),
+    (re.compile(r"deepseek.*(3\.[2-9]|v4|r2)", re.I), "Fictional DeepSeek Model"),
+    (re.compile(r"grok.*(4-5|5)", re.I), "Fictional xAI Grok Model"),
+    (re.compile(r"glm-5", re.I), "Unreleased GLM Model"),
+    (re.compile(r"astra|turbo-max|ultra-max|custom|hack|shared|proxy", re.I), "Reseller-Branded / Spoofed Suffix")
+]
+
+
+def check_fake_pattern(model_id: str):
+    if not model_id:
+        return None
+    for pattern, reason in FAKE_MODEL_PATTERNS:
+        if pattern.search(model_id):
+            return {"pattern": pattern, "reason": reason}
+    return None
+
+
 class ApiClient:
     def __init__(self, base_url: str, api_key: str, protocol: str = "auto", timeout: int = 30):
         self.base_url = base_url.rstrip("/")
@@ -127,12 +147,10 @@ class ApiClient:
                 models = data.get("data", [])
                 flagged = []
                 tenants = set()
-                fake_pattern = re.compile(r"claude.*(4-5|4\.5|5|opus-5|sonnet-4-5)|deepseek.*(3\.[2-9]|v4)|grok.*(4-5|5)|glm-5|arza|mod", re.I)
-
                 parsed_models = []
                 for m in models:
                     m_id = m.get("id", "")
-                    if fake_pattern.search(m_id):
+                    if check_fake_pattern(m_id):
                         flagged.append(m_id)
                     owner = m.get("owned_by", "")
                     if owner and owner.lower() not in ("openai", "anthropic", "system", "google", "meta", "deepseek"):
@@ -527,18 +545,28 @@ Examples:
             if not args.json:
                 print(f"{C_RED}[FAIL]{C_RESET}  Interrupted: {e}")
 
-    final_score = round((total_score / len(vectors)) * 100)
+    capability_score = round((total_score / len(vectors)) * 100)
     vendor = detect_vendor(args.model)
+    target_fake = check_fake_pattern(args.model)
+    has_fake_catalog = bool(catalog.get("flagged"))
 
-    if final_score >= 80 and not has_critical:
-        verdict = "genuine"
-        exit_code = 0
-    elif final_score >= 50 and not has_critical:
+    verdict = "fake"
+    exit_code = 1
+    authenticity_score = capability_score
+
+    if target_fake or has_critical or (has_fake_catalog and capability_score < 85):
+        verdict = "fake"
+        crit_penalty = (70 if target_fake else 40) + (50 if has_critical else 0)
+        authenticity_score = min(30, max(0, capability_score - crit_penalty))
+        exit_code = 1
+    elif has_fake_catalog or capability_score < 80:
         verdict = "suspicious"
+        authenticity_score = min(65, max(0, capability_score - 25))
         exit_code = 1
     else:
-        verdict = "fake"
-        exit_code = 1
+        verdict = "genuine"
+        authenticity_score = capability_score
+        exit_code = 0
 
     if args.json:
         report = {
@@ -546,10 +574,13 @@ Examples:
             "target": {
                 "model": args.model,
                 "baseUrl": args.base_url,
-                "detectedOriginalVendor": vendor["name"]
+                "detectedOriginalVendor": vendor["name"],
+                "isFictionalModel": bool(target_fake)
             },
             "audit": {
-                "score": final_score,
+                "score": authenticity_score,
+                "authenticityScore": authenticity_score,
+                "capabilityScore": capability_score,
                 "verdict": verdict.upper(),
                 "hasCriticalFailure": has_critical,
                 "catalog": catalog,
@@ -576,7 +607,10 @@ Examples:
         v_text = "CONFIRMED SPOOFED / MASKED" if is_en else "PALSU / HASIL MASKING (SPOOFED)"
         v_risk = "FRAUD / FAKED" if is_en else "PENIPUAN (FAKED)"
 
-    print(f" {'AUTHENTICITY SCORE' if is_en else 'SKOR KEASLIAN'}   : {C_BOLD}{v_color}{final_score}%{C_RESET}")
+    print(f" {'AUTHENTICITY SCORE' if is_en else 'SKOR KEASLIAN'}   : {C_BOLD}{v_color}{authenticity_score}%{C_RESET}")
+    if authenticity_score != capability_score:
+        note = "Underlying Model Passed Vectors" if is_en else "Model di balik proxy lolos uji nalar"
+        print(f" {'CAPABILITY SCORE' if is_en else 'KEMAMPUAN TEKNIS'}  : {C_BOLD}{capability_score}%{C_RESET} {C_DIM}({note}){C_RESET}")
     print(f" {'VERDICT' if is_en else 'HASIL DIAGNOSTIK'}   : {C_BOLD}{v_color}{v_text}{C_RESET}")
     print(f" {'DETECTED VENDOR' if is_en else 'VENDOR ASLI'}    : {vendor['family']}")
     if catalog.get("tenant"):
