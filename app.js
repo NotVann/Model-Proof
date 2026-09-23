@@ -1,14 +1,66 @@
-/**
- * AI Model Masking & Spoofing Detector (10-Vector Modular Engine)
- */
+// Custom Lightweight Toast Notification System
+function showToast(message, type = 'error') {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
 
-// Master Test Registry
+  const toast = document.createElement('div');
+  const id = 'toast-' + Date.now();
+  toast.id = id;
+  toast.className = 'pointer-events-auto flex items-start gap-3 p-3 rounded-lg border shadow-xl backdrop-blur-md transition-all duration-300 transform translate-y-2 opacity-0 font-mono text-xs';
+  
+  let iconSvg = '';
+  let borderBg = '';
+
+  if (type === 'error') {
+    borderBg = 'bg-[#12080a]/95 border-rose-900/70 text-rose-200';
+    iconSvg = `<svg class="w-4 h-4 text-rose-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 7.5h.008v.008H12v-.008z" />
+    </svg>`;
+  } else if (type === 'warn') {
+    borderBg = 'bg-[#141006]/95 border-amber-900/70 text-amber-200';
+    iconSvg = `<svg class="w-4 h-4 text-amber-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    </svg>`;
+  } else {
+    borderBg = 'bg-[#08120d]/95 border-emerald-900/70 text-emerald-200';
+    iconSvg = `<svg class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>`;
+  }
+
+  toast.className += ` ${borderBg}`;
+  toast.innerHTML = `
+    ${iconSvg}
+    <div class="flex-1 font-sans text-xs leading-snug">${message}</div>
+    <button type="button" class="text-zinc-500 hover:text-zinc-300 text-xs shrink-0">&times;</button>
+  `;
+
+  toast.querySelector('button').addEventListener('click', () => {
+    toast.classList.add('opacity-0', 'translate-y-2');
+    setTimeout(() => toast.remove(), 200);
+  });
+
+  container.appendChild(toast);
+  requestAnimationFrame(() => {
+    toast.classList.remove('translate-y-2', 'opacity-0');
+  });
+
+  setTimeout(() => {
+    if (toast.parentElement) {
+      toast.classList.add('opacity-0', 'translate-y-2');
+      setTimeout(() => toast.remove(), 250);
+    }
+  }, 4000);
+}
+
+// Master Test Registry with Dedicated SVGs
 const TEST_REGISTRY = [
   {
     id: 1,
     name: 'Spatial Logic & Character Horizon',
     desc: 'Obfuscated strawberry letter count + math trap.',
     quick: true,
+    svg: `<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>`,
     run: runTest1
   },
   {
@@ -16,6 +68,7 @@ const TEST_REGISTRY = [
     name: 'Tokenizer Usage & BPE Precision',
     desc: 'Prompt token discrepancy check on multi-byte payload.',
     quick: true,
+    svg: `<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" /></svg>`,
     run: runTest2
   },
   {
@@ -23,6 +76,7 @@ const TEST_REGISTRY = [
     name: 'System Instruction & Identity Leak',
     desc: 'Adversarial system prompt bypass to probe base model weights.',
     quick: true,
+    svg: `<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>`,
     run: runTest3
   },
   {
@@ -30,6 +84,7 @@ const TEST_REGISTRY = [
     name: 'Hardware Telemetry & TPS Profiling',
     desc: 'Flags hyper-fast LPU hardware (>220 TPS Groq/SambaNova proxy).',
     quick: true,
+    svg: `<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>`,
     run: runTest4
   },
   {
@@ -37,6 +92,7 @@ const TEST_REGISTRY = [
     name: 'Negative Constraint Compliance',
     desc: 'Zero-fluff SVG requirement without conversational fillers.',
     quick: true,
+    svg: `<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>`,
     run: runTest5
   },
   {
@@ -44,6 +100,7 @@ const TEST_REGISTRY = [
     name: 'Strict Schema / Constrained Decoding',
     desc: 'Enforces native JSON Schema strict parsing (crashes weak proxy engines).',
     quick: false,
+    svg: `<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>`,
     run: runTest6
   },
   {
@@ -51,6 +108,7 @@ const TEST_REGISTRY = [
     name: 'Glitched Token Embedding Anomaly',
     desc: 'Tests unspeakable tokens (SolidGoldMagikarp) tokenizer behavior.',
     quick: true,
+    svg: `<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`,
     run: runTest7
   },
   {
@@ -58,6 +116,7 @@ const TEST_REGISTRY = [
     name: 'Temporal Cutoff Horizon (2024-H2)',
     desc: 'Validates late-2024 events (Python 3.13, Nobel Oct 2024).',
     quick: true,
+    svg: `<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
     run: runTest8
   },
   {
@@ -65,6 +124,7 @@ const TEST_REGISTRY = [
     name: 'Reasoning CoT & Delimiter Structure',
     desc: 'Checks reasoning tokens vs <think> tags (flags o1 masked to DeepSeek-R1).',
     quick: false,
+    svg: `<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>`,
     run: runTest9
   },
   {
@@ -72,6 +132,7 @@ const TEST_REGISTRY = [
     name: 'Type-Level Memory & Lifetime Logic',
     desc: 'High-order Rust borrow checker & HRTB lifetime edge-case.',
     quick: false,
+    svg: `<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" /></svg>`,
     run: runTest10
   }
 ];
@@ -117,32 +178,35 @@ const el = {
   suiteProgressText: document.getElementById('suite-progress-text')
 };
 
-// Render Checkboxes with Custom Bespoke SVG Checkmarks
+// Render Checkboxes with Custom SVG Vectors & Bespoke Checkmarks
 function renderTestCheckboxes() {
   el.testCheckboxesContainer.innerHTML = '';
   TEST_REGISTRY.forEach(t => {
     const isChecked = state.selectedTests.includes(t.id);
     const item = document.createElement('label');
-    const checkedBorderClass = isChecked ? 'border-emerald-500/30 bg-emerald-950/10' : 'border-zinc-800/60 bg-zinc-950/40';
-    item.className = `group flex items-start gap-3 p-2.5 rounded-md border ${checkedBorderClass} hover:border-zinc-700 cursor-pointer transition-all duration-150 select-none test-card-${t.id}`;
+    const checkedBorderClass = isChecked ? 'border-emerald-500/40 bg-emerald-950/20' : 'border-zinc-800/60 bg-zinc-950/40';
+    item.className = `group flex items-start gap-3 p-2.5 rounded-lg border ${checkedBorderClass} hover:border-zinc-700 cursor-pointer transition-all duration-150 select-none test-card-${t.id}`;
     
     item.innerHTML = `
       <div class="relative flex items-center justify-center mt-0.5">
         <input type="checkbox" value="${t.id}" ${isChecked ? 'checked' : ''} class="peer sr-only test-checkbox">
-        <div class="w-4 h-4 rounded border border-zinc-700 bg-zinc-900 group-hover:border-zinc-600 peer-checked:bg-emerald-500 peer-checked:border-emerald-400 flex items-center justify-center transition-all shadow-inner">
+        <div class="w-4 h-4 rounded border border-zinc-700 bg-zinc-900 group-hover:border-zinc-500 peer-checked:bg-emerald-500 peer-checked:border-emerald-400 flex items-center justify-center transition-all shadow-inner">
           <svg class="w-2.5 h-2.5 text-zinc-950 opacity-0 peer-checked:opacity-100 transition-opacity stroke-[3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
           </svg>
         </div>
       </div>
       <div class="space-y-0.5 flex-1">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-mono font-medium text-zinc-300 group-hover:text-zinc-100 transition-colors">${String(t.id).padStart(2, '0')}. ${t.name}</span>
+          <div class="flex items-center gap-2">
+            <span class="text-zinc-500 group-hover:text-emerald-400 transition-colors">${t.svg}</span>
+            <span class="text-xs font-mono font-medium text-zinc-300 group-hover:text-zinc-100 transition-colors">${String(t.id).padStart(2, '0')}. ${t.name}</span>
+          </div>
           ${t.quick 
             ? '<span class="text-[9px] px-1.5 py-0.2 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 font-mono">FAST</span>' 
             : '<span class="text-[9px] px-1.5 py-0.2 rounded bg-purple-950/50 text-purple-300 border border-purple-800/40 font-mono">DEEP</span>'}
         </div>
-        <p class="text-[11px] text-zinc-500 font-sans leading-tight">${t.desc}</p>
+        <p class="text-[11px] text-zinc-500 font-sans leading-tight pl-5">${t.desc}</p>
       </div>
     `;
 
@@ -150,10 +214,10 @@ function renderTestCheckboxes() {
       const id = parseInt(e.target.value);
       if (e.target.checked) {
         if (!state.selectedTests.includes(id)) state.selectedTests.push(id);
-        item.className = item.className.replace('border-zinc-800/60 bg-zinc-950/40', 'border-emerald-500/30 bg-emerald-950/10');
+        item.className = item.className.replace('border-zinc-800/60 bg-zinc-950/40', 'border-emerald-500/40 bg-emerald-950/20');
       } else {
         state.selectedTests = state.selectedTests.filter(x => x !== id);
-        item.className = item.className.replace('border-emerald-500/30 bg-emerald-950/10', 'border-zinc-800/60 bg-zinc-950/40');
+        item.className = item.className.replace('border-emerald-500/40 bg-emerald-950/20', 'border-zinc-800/60 bg-zinc-950/40');
       }
       state.selectedTests.sort((a, b) => a - b);
       localStorage.setItem('mm_selected_tests', JSON.stringify(state.selectedTests));
@@ -731,12 +795,12 @@ Respond strictly in 2 bullet points.`;
 async function startAudit() {
   if (state.isRunning) return;
   if (!state.apiKey) {
-    alert('Please enter your API Key first.');
+    showToast('Missing target API Key. Please provide an API token before initiating scan.', 'error');
     el.apiKey.focus();
     return;
   }
   if (state.selectedTests.length === 0) {
-    alert('Please select at least 1 test vector to run.');
+    showToast('Zero vectors selected. Please enable at least 1 fingerprint vector.', 'warn');
     return;
   }
 
@@ -774,21 +838,24 @@ async function startAudit() {
       el.verdictBadge.textContent = 'LIKELY GENUINE';
       el.verdictBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 uppercase inline-block';
       appendLog(`[Audit Verdict] Score: ${percentage}% -> Confirmed genuine model signature.`, 'success');
+      showToast(`Scan complete: Model verified genuine with ${percentage}% confidence score.`, 'success');
     } else if (percentage >= 50) {
       el.verdictScore.className = 'text-2xl font-bold font-mono text-yellow-400';
       el.verdictBadge.textContent = 'SUSPICIOUS / DOWNGRADED';
       el.verdictBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-yellow-950 text-yellow-400 border border-yellow-800 uppercase inline-block';
       appendLog(`[Audit Verdict] Score: ${percentage}% -> Behavioral anomalies. Suspected downgrade proxy.`, 'warn');
+      showToast(`Warning: Target exhibit behavioral anomalies (${percentage}% score). Suspected downgrade.`, 'warn');
     } else {
       el.verdictScore.className = 'text-2xl font-bold font-mono text-rose-400';
       el.verdictBadge.textContent = 'CONFIRMED MASKED / FAKE';
       el.verdictBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-rose-950 text-rose-400 border border-rose-800 uppercase inline-block';
       appendLog(`[Audit Verdict] Score: ${percentage}% -> Severe failure across fingerprint vectors. Model is FAKE.`, 'error');
+      showToast(`Critical: Severe fingerprint mismatches (${percentage}%). Model confirmed spoofed.`, 'error');
     }
 
   } catch (err) {
     appendLog(`Audit interrupted: ${err.message}`, 'error');
-    alert(`Audit Error: ${err.message}`);
+    showToast(`Audit failed: ${err.message}`, 'error');
   } finally {
     state.isRunning = false;
     el.btnStartAudit.disabled = false;
