@@ -592,6 +592,7 @@ function renderPipelineRows() {
 
   activeTests.forEach(t => {
     const info = getVectorInfo(t.id);
+    const initialStatus = state.lang === 'en' ? 'READY' : 'SIAP';
     const row = document.createElement('div');
     row.id = `test-row-${t.id}`;
     row.className = 'p-2 sm:p-2.5 rounded bg-zinc-950/60 border border-zinc-800/60 flex items-start justify-between gap-2.5 sm:gap-3 transition';
@@ -603,7 +604,7 @@ function renderPipelineRows() {
         </div>
         <p class="text-[11px] text-zinc-500 test-detail font-sans pl-5 break-words">${info.desc}</p>
       </div>
-      <span class="test-status font-mono text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded bg-zinc-900 text-zinc-500 border border-zinc-800 uppercase tracking-wider shrink-0 mt-0.5">PENDING</span>
+      <span class="test-status font-mono text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 uppercase tracking-wider shrink-0 mt-0.5">${initialStatus}</span>
     `;
     el.testPipelineContainer.appendChild(row);
   });
@@ -1326,20 +1327,24 @@ function updateTestRow(testId, status, detailText = null) {
       <circle class="opacity-20" cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="4"></circle>
       <circle class="spinner-circle-morph" cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="4"></circle>
     </svg>`;
-    statusBadge.textContent = 'RUNNING';
+    statusBadge.textContent = state.lang === 'en' ? 'RUNNING' : 'PROSES';
     statusBadge.className = 'test-status font-mono text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 uppercase';
   } else if (status === 'PASSED') {
     icon.innerHTML = `<svg class="w-3.5 h-3.5 text-emerald-400 shrink-0 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
-    statusBadge.textContent = 'PASSED';
+    statusBadge.textContent = state.lang === 'en' ? 'PASSED' : 'LOLOS';
     statusBadge.className = 'test-status font-mono text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 uppercase';
   } else if (status === 'WARNING') {
     icon.innerHTML = `<svg class="w-3.5 h-3.5 text-yellow-400 shrink-0 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`;
-    statusBadge.textContent = 'SUSPICIOUS';
+    statusBadge.textContent = state.lang === 'en' ? 'SUSPICIOUS' : 'CURIGA';
     statusBadge.className = 'test-status font-mono text-[10px] px-2 py-0.5 rounded bg-yellow-950 text-yellow-400 border border-yellow-800 uppercase';
   } else if (status === 'FAILED') {
     icon.innerHTML = `<svg class="w-3.5 h-3.5 text-rose-400 shrink-0 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
-    statusBadge.textContent = 'FAILED';
+    statusBadge.textContent = state.lang === 'en' ? 'FAILED' : 'GAGAL';
     statusBadge.className = 'test-status font-mono text-[10px] px-2 py-0.5 rounded bg-rose-950 text-rose-400 border border-rose-800 uppercase';
+  } else if (status === 'PENDING' || status === 'READY') {
+    icon.innerHTML = `<i class="fa-regular fa-circle text-xs text-zinc-600"></i>`;
+    statusBadge.textContent = state.lang === 'en' ? 'READY' : 'SIAP';
+    statusBadge.className = 'test-status font-mono text-[10px] px-2 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 uppercase';
   }
 }
 
