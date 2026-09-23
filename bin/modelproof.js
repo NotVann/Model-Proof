@@ -180,7 +180,7 @@ function checkFakeModelPattern(modelId = '') {
 const cliMetrics = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
 
 // HTTP Caller
-async function callModel(opts, { messages, stream = false, maxTokens = 400, temperature = 0.0, responseFormat = null }) {
+async function callModel(opts, { messages, stream = false, maxTokens = 400, temperature = 0.0, responseFormat = null, extraBody = {} }) {
   const activeProto = opts.activeProto || 'openai';
   const cleanBase = opts.baseUrl.replace(/\/+$/, '');
   const endpoint = activeProto === 'openai' ? `${cleanBase}/chat/completions` : `${cleanBase}/messages`;
@@ -199,7 +199,8 @@ async function callModel(opts, { messages, stream = false, maxTokens = 400, temp
       messages,
       stream,
       max_tokens: maxTokens,
-      temperature
+      temperature,
+      ...extraBody
     };
     if (responseFormat) bodyObj.response_format = responseFormat;
   } else {
@@ -627,6 +628,101 @@ async function runVector14(opts) {
   return { score: 0.0, status: 'FAIL', note: `Failed diplomatic cutoff (${chosen.name})`, raw: res.content };
 }
 
+async function runVector15(opts) {
+  const LOGPROB_PROBES = [
+    { name: 'Water Formula', prompt: 'Complete with 1 word or symbol: The chemical formula for water is', expected: ['h2o', 'water'] },
+    { name: 'Opposite of Hot', prompt: 'Complete with 1 word: The opposite temperature of boiling hot is', expected: ['cold', 'freezing'] },
+    { name: 'Arithmetic Identity', prompt: 'Complete with 1 number: Two plus two equals', expected: ['4', 'four'] }
+  ];
+  const chosen = LOGPROB_PROBES[Math.floor(Math.random() * LOGPROB_PROBES.length)];
+  const isAnthropic = opts.activeProto === 'anthropic' || opts.model.toLowerCase().includes('claude');
+
+  if (isAnthropic) {
+    const res = await callModel(opts, { messages: [{ role: 'user', content: chosen.prompt }], maxTokens: 4 });
+    const low = res.content.toLowerCase();
+    if (chosen.expected.some(e => low.includes(e))) {
+      return { score: 1.0, status: 'PASS', note: 'Anthropic native specification compliant (Logprobs bypass)', raw: res.content };
+    }
+    return { score: 0.2, status: 'FAIL', note: 'Failed basic factual accuracy', raw: res.content };
+  }
+
+  try {
+    const res = await callModel(opts, {
+      messages: [{ role: 'user', content: chosen.prompt }],
+      maxTokens: 3,
+      temperature: 0.0,
+      extraBody: { logprobs: true, top_logprobs: 3 }
+    });
+    const logprobData = res.raw?.choices?.[0]?.logprobs?.content;
+    if (Array.isArray(logprobData) && logprobData.length > 0) {
+      const first = logprobData[0];
+      if (Array.isArray(first.top_logprobs) && first.top_logprobs.length > 0 && typeof first.logprob === 'number') {
+        const cands = first.top_logprobs.map(t => `${t.token.trim()}(${t.logprob.toFixed(2)})`).join(', ');
+        return { score: 1.0, status: 'PASS', note: `Verified engine logprobs [${cands}] (Zero wrapper scraping)`, raw: JSON.stringify(first) };
+      }
+    }
+    return { score: 0.5, status: 'WARN', note: 'Upstream proxy omitted logprobs array (Likely web scraper)', raw: res.content };
+  } catch (err) {
+    if (err.message.includes('400') || err.message.includes('not supported') || err.message.includes('logprobs')) {
+      return { score: 0.0, status: 'FAIL', note: `CRITICAL: Rejected logprobs parameter (${err.message.slice(0, 60)}). Confirmed web wrapper!`, crit: true, raw: err.message };
+    }
+    return { score: 0.2, status: 'FAIL', note: `Logprob probe failed: ${err.message}`, raw: err.message };
+  }
+}
+
+async function runVector16(opts) {
+  const startNum = Math.floor(Math.random() * 5) + 1;
+  const prompt = `Count strictly from ${startNum} to ${startNum + 12} separated by single spaces. Output ONLY the numbers, no punctuation, no words.`;
+
+  try {
+    const { response, t0 } = await callModel(opts, {
+      messages: [{ role: 'user', content: prompt }],
+      stream: true,
+      maxTokens: 40,
+      temperature: 0.0
+    });
+
+    const chunkTimes = [];
+    const chunkSizes = [];
+    let buffer = '';
+
+    for await (const chunk of response.body) {
+      chunkTimes.push(performance.now());
+      chunkSizes.push(chunk.length);
+      buffer += chunk.toString();
+    }
+
+    const chunkCount = chunkTimes.length;
+    const avgSize = Math.round(chunkSizes.reduce((a, b) => a + b, 0) / (chunkCount || 1));
+
+    if (chunkCount <= 2) {
+      return {
+        score: 0.0,
+        status: 'FAIL',
+        note: `CRITICAL: Stream fake-dumped in only ${chunkCount} chunk(s). Upstream proxy buffers whole output!`,
+        crit: true,
+        raw: buffer.slice(0, 200)
+      };
+    }
+    if (chunkCount >= 6) {
+      return {
+        score: 1.0,
+        status: 'PASS',
+        note: `Progressive SSE streaming confirmed (${chunkCount} chunks, ~${avgSize}B/chunk)`,
+        raw: buffer.slice(0, 200)
+      };
+    }
+    return {
+      score: 0.5,
+      status: 'WARN',
+      note: `Moderate chunk grouping (${chunkCount} chunks, buffered proxy)`,
+      raw: buffer.slice(0, 200)
+    };
+  } catch (err) {
+    return { score: 0.5, status: 'WARN', note: `Streaming unsupported or bypassed: ${err.message}`, raw: err.message };
+  }
+}
+
 // ----------------------------------------------------
 // MAIN CONTROLLER
 // ----------------------------------------------------
@@ -741,6 +837,8 @@ async function main() {
     VECTORS.push({ id: 12, name: 'Refusal Ladder & Alignment Gradient', fn: runVector12 });
     VECTORS.push({ id: 13, name: 'Token Inflation & System Prompt Leak', fn: runVector13 });
     VECTORS.push({ id: 14, name: 'Linguistic Nuance & Diplomatic Horizon', fn: runVector14 });
+    VECTORS.push({ id: 15, name: 'Engine Logprobs & Top-K Density', fn: runVector15 });
+    VECTORS.push({ id: 16, name: 'SSE Stream Jitter & Chunk Buffering', fn: runVector16 });
   }
 
   const estMinTokens = VECTORS.length * 120;

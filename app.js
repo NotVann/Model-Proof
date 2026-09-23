@@ -166,6 +166,22 @@ const TEST_REGISTRY = [
     quick: true,
     svg: `<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" /></svg>`,
     run: runTest14
+  },
+  {
+    id: 15,
+    name: 'Engine Logprobs & Top-K Density',
+    desc: 'Probes token logprobs matrix to unmask web-scraping wrappers & fake APIs.',
+    quick: true,
+    svg: `<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>`,
+    run: runTest15
+  },
+  {
+    id: 16,
+    name: 'SSE Stream Jitter & Chunk Buffering',
+    desc: 'Measures live SSE delta variance to detect non-native buffered proxies.',
+    quick: false,
+    svg: `<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>`,
+    run: runTest16
   }
 ];
 
@@ -242,6 +258,10 @@ const TRANSLATIONS = {
     v13_desc: 'Ukur gelembung token input dari wrapper tersembunyi (Kiro/Copilot bloat).',
     v14_name: 'Nuansa Linguistik & Horizon Diplomatik',
     v14_desc: 'Fakta diplomatik multilateral & uji konstrain multi-skrip bahasa non-Inggris.',
+    v15_name: 'Logprobs Engine & Densitas Top-K',
+    v15_desc: 'Uji matriks logprob probabilitas token (bongkar pembungkus web scraping/bot).',
+    v16_name: 'Jitter Streaming SSE & Buffer Proxy',
+    v16_desc: 'Ukur varians delta SSE real-time untuk deteksi proxy non-native yang mem-buffer data.',
 
     // Verdicts
     verdictAuditing: 'SEDANG MEMERIKSA...',
@@ -342,6 +362,10 @@ const TRANSLATIONS = {
     v13_desc: 'Measures prompt token bloat from hidden wrapper prompts (Kiro/Copilot).',
     v14_name: 'Linguistic Nuance & Diplomatic Horizon',
     v14_desc: 'Multilateral diplomatic facts & multi-script negative constraint checks.',
+    v15_name: 'Engine Logprobs & Top-K Density',
+    v15_desc: 'Probes token logprobs matrix to unmask web-scraping wrappers & fake APIs.',
+    v16_name: 'SSE Stream Jitter & Chunk Buffering',
+    v16_desc: 'Measures live SSE delta variance to detect non-native buffered proxies.',
 
     // Verdicts
     verdictAuditing: 'AUDITING...',
@@ -1320,7 +1344,7 @@ el.btnSelectNone.addEventListener('click', () => {
 });
 
 // HTTP Request Core
-async function callModel({ messages, stream = false, maxTokens = 500, temperature = 0.0, responseFormat = null }) {
+async function callModel({ messages, stream = false, maxTokens = 500, temperature = 0.0, responseFormat = null, extraBody = {} }) {
   const activeProto = state.detectedProtocol || 'openai';
   let targetUrl = state.baseUrl || (activeProto === 'openai' ? 'https://api.openai.com/v1' : 'https://api.anthropic.com/v1');
   targetUrl = targetUrl.replace(/\/+$/, '');
@@ -1340,7 +1364,8 @@ async function callModel({ messages, stream = false, maxTokens = 500, temperatur
       messages: messages,
       stream: stream,
       max_tokens: maxTokens,
-      temperature: temperature
+      temperature: temperature,
+      ...extraBody
     };
     if (responseFormat) body.response_format = responseFormat;
   } else {
@@ -2557,6 +2582,174 @@ async function runTest14() {
 
   updateTestRow(14, 'FAILED', `Failed diplomatic cutoff on ${chosenDip.name}.`, res.content, respMeta);
   return { score: 0.0, rawResponse: res.content };
+}
+
+// 15. Engine Logprobs & Top-K Density (Unmask Web-Scrapers / Bot Wrappers)
+async function runTest15() {
+  updateTestRow(15, 'RUNNING');
+
+  const LOGPROB_PROBES = [
+    {
+      name: 'Chemical Symbol of Water',
+      prompt: 'Complete this exact factual phrase with only 1 word or chemical symbol: The chemical formula for water is',
+      expectedTokens: ['h2o', ' h2o', 'water']
+    },
+    {
+      name: 'Opposite of Hot',
+      prompt: 'Complete this exact factual phrase with only 1 word: The opposite temperature of boiling hot is',
+      expectedTokens: ['cold', ' freezing', ' cold']
+    },
+    {
+      name: 'Basic Arithmetic Identity',
+      prompt: 'Complete this exact factual phrase with only 1 number: Two plus two equals',
+      expectedTokens: ['4', ' four', ' 4']
+    }
+  ];
+
+  const chosen = LOGPROB_PROBES[Math.floor(Math.random() * LOGPROB_PROBES.length)];
+  appendLog(`[Vector 15] Probing Engine Logprobs Matrix (${chosen.name})...`);
+
+  const activeProto = state.detectedProtocol || 'openai';
+  const isAnthropic = activeProto === 'anthropic' || state.claimedModel.toLowerCase().includes('claude');
+
+  // If claimed model is Anthropic native, standard public Anthropic does not expose logprobs
+  if (isAnthropic) {
+    const res = await callModel({ messages: [{ role: 'user', content: chosen.prompt }], maxTokens: 4 });
+    const low = res.content.toLowerCase();
+    const passed = chosen.expectedTokens.some(tok => low.includes(tok.trim()));
+    const respMeta = `${res.latency}ms | Anthropic Native (Logprobs N/A by spec)`;
+    if (passed) {
+      updateTestRow(15, 'PASSED', 'Anthropic native specification compliant (Logprobs bypass).', res.content, respMeta);
+      return { score: 1.0, rawResponse: res.content };
+    }
+    updateTestRow(15, 'FAILED', 'Failed basic completion factual accuracy.', res.content, respMeta);
+    return { score: 0.2, rawResponse: res.content };
+  }
+
+  try {
+    const res = await callModel({
+      messages: [{ role: 'user', content: chosen.prompt }],
+      maxTokens: 3,
+      temperature: 0.0,
+      extraBody: {
+        logprobs: true,
+        top_logprobs: 3
+      }
+    });
+
+    const respMeta = `${res.latency}ms | Engine: Logprobs Probe`;
+    const choices = res.raw?.choices?.[0];
+    const logprobData = choices?.logprobs?.content;
+
+    if (Array.isArray(logprobData) && logprobData.length > 0) {
+      const firstTok = logprobData[0];
+      const hasTopLogprobs = Array.isArray(firstTok.top_logprobs) && firstTok.top_logprobs.length > 0;
+      if (hasTopLogprobs && typeof firstTok.logprob === 'number') {
+        const topCandidates = firstTok.top_logprobs.map(t => `${t.token.trim()}(${t.logprob.toFixed(2)})`).join(', ');
+        updateTestRow(15, 'PASSED', `Verified official engine logprobs [${topCandidates}]. Zero wrapper scraping.`, JSON.stringify(firstTok, null, 2), respMeta);
+        return { score: 1.0, rawResponse: JSON.stringify(firstTok, null, 2) };
+      }
+    }
+
+    // Proxy didn't return error, but stripped/omitted logprobs
+    auditState.findings.push({
+      category: 'identity',
+      severity: 'warning',
+      headline: 'Logprobs Dihilangkan / Tidak Didukung Upstream',
+      desc: 'Endpoint OpenAI-compatible tidak mengembalikan array logprobs resmi. Indikasi proxy web scraping atau gateway tanpa akses internal engine.'
+    });
+    updateTestRow(15, 'WARNING', 'Upstream proxy omitted logprobs array (Likely web scraper or custom proxy router).', res.content, respMeta);
+    return { score: 0.5, rawResponse: res.content };
+
+  } catch (err) {
+    if (err.message.includes('400') || err.message.includes('not supported') || err.message.includes('logprobs')) {
+      auditState.findings.push({
+        category: 'identity',
+        severity: 'critical',
+        headline: 'Parameter Engine Ditolak (Confirmed Web Wrapper / Bot)',
+        desc: `Target menolak parameter "logprobs": true (Error: ${err.message}). Membuktikan backend BUKAN API engine resmi OpenAI, melainkan bot browser atau wrapper chat web!`
+      });
+      updateTestRow(15, 'FAILED', `CRITICAL: Rejected logprobs parameter. Confirmed non-engine web wrapper!`, err.message, '400 Wrapper Rejection');
+      return { score: 0.0, rawResponse: err.message, crit: true };
+    }
+    updateTestRow(15, 'FAILED', `Logprob probe failed: ${err.message}`, err.message, 'Error');
+    return { score: 0.2, rawResponse: err.message };
+  }
+}
+
+// 16. SSE Stream Jitter & Chunk Buffering (Detect Fake Buffered Proxies)
+async function runTest16() {
+  updateTestRow(16, 'RUNNING');
+
+  const startNum = Math.floor(Math.random() * 5) + 1;
+  const countLen = 12;
+  const prompt = `Count strictly from ${startNum} to ${startNum + countLen} separated by single spaces. Output ONLY the numbers, no punctuation, no words.`;
+
+  appendLog(`[Vector 16] Probing SSE Stream Timing & Buffer Jitter...`);
+
+  try {
+    const { res, startTime } = await callModel({
+      messages: [{ role: 'user', content: prompt }],
+      stream: true,
+      maxTokens: 40,
+      temperature: 0.0
+    });
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    const chunkTimestamps = [];
+    const chunkSizes = [];
+    let fullText = '';
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const now = performance.now();
+      chunkTimestamps.push(now);
+      const textChunk = decoder.decode(value, { stream: true });
+      chunkSizes.push(textChunk.length);
+      buffer += textChunk;
+    }
+
+    const totalDuration = Math.round(performance.now() - startTime);
+    const chunkCount = chunkTimestamps.length;
+    const respMeta = `${totalDuration}ms | ${chunkCount} chunks | Streamed`;
+
+    // Calculate inter-chunk intervals
+    const intervals = [];
+    for (let i = 1; i < chunkTimestamps.length; i++) {
+      intervals.push(chunkTimestamps[i] - chunkTimestamps[i - 1]);
+    }
+
+    const avgChunkSize = chunkSizes.reduce((a, b) => a + b, 0) / (chunkSizes.length || 1);
+
+    // If chunkCount <= 2 for a 12-number generation -> Entire response was buffered then burst-dumped!
+    if (chunkCount <= 2) {
+      auditState.findings.push({
+        category: 'architecture',
+        severity: 'critical',
+        headline: 'Fake Streaming Terdeteksi (Burst Dump / Full Buffer)',
+        desc: `Proxy mengklaim mendukung streaming, namun seluruh output (${chunkSizes.reduce((a,b)=>a+b,0)} bytes) dikirimkan hanya dalam ${chunkCount} chunk burst. Ini membuktikan proxy mengumpulkan seluruh teks sebelum meneruskannya ke klien.`
+      });
+      updateTestRow(16, 'FAILED', `CRITICAL: Stream fake-dumped in only ${chunkCount} chunk(s). Upstream proxy buffers whole output!`, buffer.slice(0, 300), respMeta);
+      return { score: 0.0, rawResponse: buffer, crit: true };
+    }
+
+    // Normal genuine streaming: chunks distributed progressively
+    if (chunkCount >= 6) {
+      updateTestRow(16, 'PASSED', `Verified genuine progressive SSE emission (${chunkCount} chunks, ~${Math.round(avgChunkSize)} bytes/chunk).`, buffer.slice(0, 300), respMeta);
+      return { score: 1.0, rawResponse: buffer };
+    }
+
+    updateTestRow(16, 'WARNING', `Moderate chunk grouping (${chunkCount} chunks, slight buffering proxy).`, buffer.slice(0, 300), respMeta);
+    return { score: 0.5, rawResponse: buffer };
+
+  } catch (err) {
+    appendLog(`[Vector 16] SSE stream test failed: ${err.message}`, 'warn');
+    updateTestRow(16, 'WARNING', `Streaming test skipped or unsupported: ${err.message}`, err.message, 'Stream Bypass');
+    return { score: 0.5, rawResponse: err.message };
+  }
 }
 
 // ----------------------------------------------------

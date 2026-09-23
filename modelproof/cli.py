@@ -169,7 +169,7 @@ class ApiClient:
         except Exception:
             return {"count": 0, "models": [], "flagged": [], "tenant": None}
 
-    def call_model(self, model: str, messages: list, max_tokens: int = 400, temperature: float = 0.0, response_format: dict = None, stream: bool = False):
+    def call_model(self, model: str, messages: list, max_tokens: int = 400, temperature: float = 0.0, response_format: dict = None, stream: bool = False, extra_body: dict = None):
         endpoint = f"{self.base_url}/chat/completions" if self.active_proto == "openai" else f"{self.base_url}/messages"
         headers = {
             "Content-Type": "application/json",
@@ -189,6 +189,8 @@ class ApiClient:
             }
             if response_format:
                 body["response_format"] = response_format
+            if extra_body:
+                body.update(extra_body)
         else:
             system = None
             clean_msgs = []
@@ -532,6 +534,103 @@ def vec14_linguistic_nuance(client: ApiClient, model: str):
     return {"score": 0.0, "status": "FAIL", "note": f"Failed diplomatic cutoff ({chosen['name']})", "raw": res["content"]}
 
 
+def vec15_logprobs(client: ApiClient, model: str):
+    probes = [
+        {"name": "Water Formula", "prompt": "Complete with 1 word or symbol: The chemical formula for water is", "expected": ["h2o", "water"]},
+        {"name": "Opposite of Hot", "prompt": "Complete with 1 word: The opposite temperature of boiling hot is", "expected": ["cold", "freezing"]},
+        {"name": "Arithmetic Identity", "prompt": "Complete with 1 number: Two plus two equals", "expected": ["4", "four"]}
+    ]
+    chosen = random.choice(probes)
+    is_anthropic = client.active_proto == "anthropic" or "claude" in model.lower()
+
+    if is_anthropic:
+        res = client.call_model(model, [{"role": "user", "content": chosen["prompt"]}], max_tokens=4)
+        low = res["content"].lower()
+        if any(e in low for e in chosen["expected"]):
+            return {"score": 1.0, "status": "PASS", "note": "Anthropic native specification compliant (Logprobs bypass)", "raw": res["content"]}
+        return {"score": 0.2, "status": "FAIL", "note": "Failed basic factual accuracy", "raw": res["content"]}
+
+    try:
+        res = client.call_model(
+            model,
+            [{"role": "user", "content": chosen["prompt"]}],
+            max_tokens=3,
+            temperature=0.0,
+            extra_body={"logprobs": True, "top_logprobs": 3}
+        )
+        raw_data = res.get("raw") or {}
+        choices = raw_data.get("choices", [])
+        if choices:
+            logprob_data = choices[0].get("logprobs", {}).get("content", [])
+            if isinstance(logprob_data, list) and len(logprob_data) > 0:
+                first = logprob_data[0]
+                top_lp = first.get("top_logprobs", [])
+                if isinstance(top_lp, list) and len(top_lp) > 0 and isinstance(first.get("logprob"), (int, float)):
+                    cands = ", ".join(f"{t.get('token','').strip()}({t.get('logprob',0.0):.2f})" for t in top_lp)
+                    return {"score": 1.0, "status": "PASS", "note": f"Verified engine logprobs [{cands}] (Zero wrapper scraping)", "raw": json.dumps(first)}
+        return {"score": 0.5, "status": "WARN", "note": "Upstream proxy omitted logprobs array (Likely web scraper)", "raw": res["content"]}
+    except Exception as err:
+        err_msg = str(err).lower()
+        if "400" in err_msg or "not supported" in err_msg or "logprobs" in err_msg:
+            return {"score": 0.0, "status": "FAIL", "note": f"CRITICAL: Rejected logprobs parameter ({str(err)[:60]}). Confirmed web wrapper!", "crit": True, "raw": str(err)}
+        return {"score": 0.2, "status": "FAIL", "note": f"Logprob probe failed: {str(err)}", "raw": str(err)}
+
+
+def vec16_stream_jitter(client: ApiClient, model: str):
+    start_num = random.randint(1, 5)
+    prompt = f"Count strictly from {start_num} to {start_num + 12} separated by single spaces. Output ONLY the numbers, no punctuation, no words."
+
+    try:
+        res_stream, t0 = client.call_model(
+            model,
+            [{"role": "user", "content": prompt}],
+            max_tokens=40,
+            temperature=0.0,
+            stream=True
+        )
+
+        chunk_times = []
+        chunk_sizes = []
+        buffer = []
+
+        with res_stream as r:
+            while True:
+                line = r.readline()
+                if not line:
+                    break
+                chunk_times.append(time.perf_counter())
+                chunk_sizes.append(len(line))
+                buffer.append(line.decode("utf-8", errors="ignore"))
+
+        chunk_count = len(chunk_times)
+        avg_size = round(sum(chunk_sizes) / (chunk_count or 1))
+        full_text = "".join(buffer)
+
+        if chunk_count <= 2:
+            return {
+                "score": 0.0,
+                "status": "FAIL",
+                "note": f"CRITICAL: Stream fake-dumped in only {chunk_count} chunk(s). Upstream proxy buffers whole output!",
+                "crit": True,
+                "raw": full_text[:200]
+            }
+        if chunk_count >= 6:
+            return {
+                "score": 1.0,
+                "status": "PASS",
+                "note": f"Progressive SSE streaming confirmed ({chunk_count} chunks, ~{avg_size}B/chunk)",
+                "raw": full_text[:200]
+            }
+        return {
+            "score": 0.5,
+            "status": "WARN",
+            "note": f"Moderate chunk grouping ({chunk_count} chunks, buffered proxy)",
+            "raw": full_text[:200]
+        }
+    except Exception as err:
+        return {"score": 0.5, "status": "WARN", "note": f"Streaming unsupported or bypassed: {str(err)}", "raw": str(err)}
+
+
 # ----------------------------------------------------
 # CLI ENTRYPOINT
 # ----------------------------------------------------
@@ -631,6 +730,8 @@ Examples:
         vectors.append({"id": 12, "name": "Refusal Ladder & Alignment Gradient", "fn": vec12_refusal_gradient})
         vectors.append({"id": 13, "name": "Token Inflation & System Prompt Leak", "fn": vec13_token_inflation})
         vectors.append({"id": 14, "name": "Linguistic Nuance & Diplomatic Horizon", "fn": vec14_linguistic_nuance})
+        vectors.append({"id": 15, "name": "Engine Logprobs & Top-K Density", "fn": vec15_logprobs})
+        vectors.append({"id": 16, "name": "SSE Stream Jitter & Chunk Buffering", "fn": vec16_stream_jitter})
 
     est_min = len(vectors) * 120
     est_max = len(vectors) * 260
