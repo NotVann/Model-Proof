@@ -102,17 +102,74 @@ Terminal Markdown Render → Wait Next Stdin
 
 ---
 
-## 6. CONTEXT MANAGEMENT & TOKEN BUDGETING
-- **Max Window Threshold**: 80% dari target window model (default: 64k / 128k token).
-- **Token Estimator**: Heuristik BPE (~3.8 char/token).
-- **Compaction Strategy**:
-  - `Keep System Prompt`: Lock index 0 (selalu utuh).
-  - `Rolling Window Tool Truncation`: Pangkas output tool lama (`fs_read`, `bash_exec`, `web_fetch`) jadi placeholder: `[Output truncated. File content previously inspected.]`.
-  - `Summary Injection`: Jika context > threshold, panggil LLM satu kali via payload khusus untuk merangkum percakapan lama → replace rentang message 1 s/d N dengan 1 summary block.
+## 6. GIT AUTO-CHECKPOINTING & ATOMIC `/undo` ENGINE
+
+### 6.1 Shadow Checkpoint Mechanism
+- **Trigger**: Otomatis dieksekusi sebelum tool mutasi (`fs_write`, `fs_patch`, `bash_exec`) dijalankan.
+- **Workflow**:
+  1. Periksa repository Git lokal. Jika belum di-init → auto `git init` di background sandbox.
+  2. Buat snapshot state direktori via temporary shadow tree ref (`refs/astra/checkpoints/<timestamp>`).
+  3. Catat ID commit ke stack checkpoint sesi: `checkpointStack.push({ hash, timestamp, toolName, targetFile })`.
+- **Command `/undo`**:
+  - User mengetik `/undo` di terminal prompt.
+  - Engine membaca checkpoint teratas dari stack → restore working tree ke hash tersebut:
+    `git checkout <hash> -- .` (atau rollback file spesifik).
+  - Terminal feedback: `[UNDO] Rolled back changes from turn #3 (2 files restored).`
+- **Command `/diff`**:
+  - Tampilkan uncommitted changes dari turn agent terakhir dalam format ANSI color diff.
 
 ---
 
-## 7. SECURITY & SAFETY SANDBOX
+## 7. AST REPO MAP & CODEBASE SKELETON (TREE-SITTER)
+
+### 7.1 Objective & Token Efficiency
+- Mencegah token explosion: Dilarang membaca seluruh file ke context.
+- Model butuh pemahaman relasi file, nama class, method, function signature, dan export.
+
+### 7.2 Indexer Mechanism
+- **Parser**: `web-tree-sitter` (WASM) untuk JavaScript, TypeScript, Python, Go, Rust, HTML, CSS.
+- **Ekstraksi**:
+  - JS/TS: `export function`, `class`, `interface`, `type`, `import`.
+  - Python: `def`, `class`, `import`.
+  - Rust/Go: `fn`, `struct`, `impl`, `package`.
+- **Format Output Repo Map**:
+  ```
+  src/
+    config.ts: Config, loadEnv()
+    engine.ts: AgentEngine.run(), AgentEngine.step()
+    tools/
+      bash.ts: execCommand()
+      fs.ts: readFile(), writeFile(), patchFile()
+  ```
+- **Budget**: Maksimal 1.500 token di-inject ke System Prompt. Peta arsitektur selalu up-to-date setiap ada file yang diubah.
+
+---
+
+## 8. INTERACTIVE UNIFIED DIFF VIEWER (ANSI COLOR ENGINE)
+
+### 8.1 Visual Terminal Presentation
+- Setiap mutasi file (`fs_patch` / `fs_write`) menampilkan diff inline di terminal sebelum diaplikasikan:
+  - Header: `--- a/src/index.ts` (Red) / `+++ b/src/index.ts` (Green).
+  - Chunk marker: `@@ -12,4 +12,6 @@` (Cyan).
+  - Deletions: `- const port = 3000;` (Red background / bright red text).
+  - Additions: `+ const port = process.env.PORT || 3000;` (Green background / bright green text).
+- **Interactive Approval Switcher**:
+  - Setting flag `--auto-apply`: Langsung commit diff tanpa menunggu tombol (default: true di Turbo mode).
+  - Setting flag `--interactive`: Tampilkan diff → prompt `Apply this change? [y/n/e] (yes / no / edit)` sebelum file disk diubah.
+
+---
+
+## 9. CONTEXT MANAGEMENT & TOKEN BUDGETING
+- **Max Window Threshold**: 80% dari target window model (default: 64k / 128k token).
+- **Token Estimator**: Heuristik BPE (~3.8 char/token).
+- **Compaction Strategy**:
+  - `Keep System Prompt + Repo Map`: Lock index 0 & 1 (selalu utuh).
+  - `Rolling Window Tool Truncation`: Pangkas output tool lama (`fs_read`, `bash_exec`, `web_fetch`) jadi placeholder: `[Output truncated. File content previously inspected.]`.
+  - `Summary Injection`: Jika context > threshold, panggil LLM satu kali via payload khusus untuk merangkum percakapan lama → replace rentang message 2 s/d N dengan 1 summary block.
+
+---
+
+## 10. SECURITY & SAFETY SANDBOX
 1. **Command Blocklist (Hard Reject)**:
    - Linux: `rm -rf /`, `mkfs`, `:(){ :|:& };:`, `dd if=/dev/zero`.
    - Windows: `format c:`, `Remove-Item -Recurse C:\Windows`.
@@ -124,21 +181,22 @@ Terminal Markdown Render → Wait Next Stdin
 
 ---
 
-## 8. CLI UI & INTERACTION SPEC
+## 11. CLI UI & INTERACTION SPEC
 - **Dynamic Prompt String**:
   - Plan Mode: `astra-cli [PLAN] [main*]> ` (Cyan badge)
   - Build Mode: `astra-cli [BUILD] [main*]> ` (Emerald badge)
-- **Keybinding Status Bar**: `[Tab] Switch Mode | [Ctrl+C] Abort | [exit] Quit`
+- **Keybinding Status Bar**: `[Tab] Switch Mode | [/undo] Rollback | [Ctrl+C] Abort | [exit] Quit`
 - **Theme**: Minimalist dark CLI (Emerald primary, Cyan network/web, Rose error, Amber warning).
 - **Status Indicators**:
   - `Thinking...` (Braille spinner).
+  - `[DIFF] src/index.ts (+4, -1 lines)` (Purple badge).
   - `[TOOL] web_search("react 19 router")` (Cyan pill).
   - `[EXEC] npm test` (Emerald pill).
 - **Output Renderer**: Streaming markdown token langsung ke stdout via terminal ANSI renderer.
 
 ---
 
-## 9. ERROR RECOVERY MATRIX & PROXY RESILIENCY
+## 12. ERROR RECOVERY MATRIX & PROXY RESILIENCY
 - **`upstream_stream_error` / Mid-Stream Socket Drop**:
   - **Pemicu**: Proxy seller (`GPT 6 Astra` / Cloudflare gateway) memutus transmisi token di tengah jalan saat streaming output besar (SVG/kode panjang).
   - **Handling**:
@@ -160,11 +218,14 @@ Terminal Markdown Render → Wait Next Stdin
 
 ---
 
-## 10. DELIVERABLES & ACCEPTANCE CRITERIA
-1. **Single Binary / Entry point**: `npx astra-cli` atau `node bin/agent.js`.
+## 13. DELIVERABLES & ACCEPTANCE CRITERIA
+1. **Single Entry Point**: `npx astra-cli` atau `node bin/agent.js`.
 2. **Acceptance Test 1 (Plan/Build Switch)**: Tekan `Tab` di prompt terminal → badge berubah `[PLAN]` ↔ `[BUILD]` seketika tanpa crash/buffer flush.
 3. **Acceptance Test 2 (Plan Enforcement)**: Dalam mode `PLAN`, input `"hapus file temp.txt"` → model dilarang panggil `bash_exec`/`fs_write`, hanya buat rencana teks.
 4. **Acceptance Test 3 (Coding)**: Dalam mode `BUILD`, input `"buat REST API hono di file index.ts lalu jalankan test"` → agent create file + run command tanpa human intervention.
 5. **Acceptance Test 4 (Web Browser)**: Input `"baca changelog Next.js 15 dari web resminya dan rangkum"` → agent execute `web_search` → `web_fetch` → cetak markdown rangkuman akurat.
 6. **Acceptance Test 5 (Stream Socket Drop Recovery)**: Simulasi socket close saat output > 2.000 token → agent otomatis tangkap `upstream_stream_error` → fallback ke `stream: false` → file SVG/HTML berhasil ditulis utuh.
 7. **Acceptance Test 6 (Patch Self-Healing)**: File dengan CRLF Windows di-patch model dengan string LF → normalizer sukses merge diff; jika baris target halusinasi total → agent otomatis fallback memanggil `fs_write`.
+8. **Acceptance Test 7 (Git Auto-Checkpoint & /undo)**: Jalankan prompt yang mengubah 3 file → ketik `/undo` → working directory kembali identik ke state awal dalam <0.2 detik.
+9. **Acceptance Test 8 (AST Repo Map Indexing)**: Di project berukuran 50 file → jalankan ASTRA-CLI → periksa context LLM: berisi signature kelas/fungsi ringkas <1.500 token tanpa membaca isi file utuh.
+10. **Acceptance Test 9 (Unified ANSI Diff Viewer)**: Model mengubah fungsi → terminal merender blok diff hijau/merah dengan hunk line numbers sebelum perubahan ditulis ke disk.
