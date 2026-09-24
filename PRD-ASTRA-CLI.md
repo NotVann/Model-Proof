@@ -189,7 +189,32 @@ Terminal Markdown Render → Wait Next Stdin
 - **Dynamic Prompt String**:
   - Plan Mode: `astra-cli [PLAN] [main*]> ` (Cyan badge)
   - Build Mode: `astra-cli [BUILD] [main*]> ` (Emerald badge)
-- **Keybinding Status Bar**: `[Tab] Switch Mode | [/undo] Rollback | [Ctrl+C] Abort | [exit] Quit`
+- **Keybinding & Slash Commands Matrix**:
+  | Input | Fungsi | Deskripsi |
+  | :--- | :--- | :--- |
+  | `Tab` | Switch Mode | Toggle seketika antara mode `[PLAN]` dan `[BUILD]` |
+  | `/help` | Interactive Help | Tampilkan daftar command, panduan mode, status tools, dan keybindings |
+  | `/undo` | Git Rollback | Kembalikan working directory ke state sebelum turn terakhir dijalankan |
+  | `/clear` | Context Reset | Bersihkan buffer terminal dan reset riwayat memori percakapan |
+  | `/map` | Inspect Repo Map | Tampilkan skeleton AST codebase yang saat ini di-cache & diinjeksi ke prompt |
+  | `/cost` | Telemetry Detail | Rincian konsumsi token prompt/completion, biaya USD, dan rata-rata TTFT |
+  | `/model <name>` | Switch Model | Ganti model aktif di sesi berjalan tanpa me-restart CLI |
+  | `/exit` | Terminate | Keluar dari sesi ASTRA-CLI dengan aman |
+- **Output `/help` Preview**:
+  ```text
+  ASTRA-CLI Commands:
+    /help           Show this assistance manual
+    /undo           Rollback codebase mutations from last turn
+    /clear          Reset conversation context & clear screen
+    /map            Display AST codebase architecture skeleton
+    /cost           Show token usage & estimated API cost
+    /model [name]   View or set active LLM model
+    /exit           Quit CLI session
+
+  Shortcuts:
+    [Tab]           Toggle PLAN (Read-only) / BUILD (Mutate)
+    [Ctrl+C]        Abort current streaming or execution
+  ```
 - **Live Latency Stopwatch & Progress Spinner**:
   - Saat request dikirim ke upstream: Terminal merender stopwatch presisi tinggi yang update setiap 100ms:
     `[Thinking... ⠋ 1.8s | TTFT: 620ms]`
