@@ -46,6 +46,8 @@ Terminal Markdown Render → Wait Next Stdin
 | Tool Name | Scope | Param Schema | Return Type | Permission Gate |
 |---|---|---|---|---|
 | `bash_exec` | Terminal shell | `{ command: string, timeout_ms?: number }` | `stdout` / `stderr` | Mandatory jika destructive (`rm`, `del`, `git push`, kill process) |
+| `proc_spawn` | Daemon supervisor | `{ command: string, id: string }` | `{ pid, status }` | Auto-allow (menjalankan server dev/docker di background) |
+| `proc_kill` | Daemon supervisor | `{ id: string }` | Status boolean | Auto-allow |
 | `fs_read` | File system | `{ path: string, offset?: number, limit?: number }` | Text chunk | Auto-allow |
 | `fs_write` | File system | `{ path: string, content: string }` | Status boolean | Auto-allow (log preview diff) |
 | `fs_patch` | File system | `{ path: string, target: string, replacement: string }` | Diff result | Auto-allow |
@@ -209,6 +211,9 @@ Terminal Markdown Render → Wait Next Stdin
   | `/history` | Session History | Tampilkan daftar riwayat sesi percakapan sebelumnya |
   | `/resume <id>` | Resume Session | Lanjutkan kembali percakapan dari sesi yang tersimpan sebelumnya |
   | `/mcp` | MCP Status | Tampilkan status server Model Context Protocol yang terhubung |
+  | `/bg` | Daemon Manager | Pantau & kontrol background server process yang sedang running |
+  | `/commit` | Git Commit | Analisis git diff & buat Conventional Commit message otomatis |
+  | `/pr` | Pull Request | Buka branch baru, commit, dan submit GitHub PR via GitHub CLI |
   | `/clear` | Context Reset | Bersihkan buffer terminal dan reset riwayat memori percakapan |
   | `/map` | Inspect Repo Map | Tampilkan skeleton AST codebase yang saat ini di-cache & diinjeksi ke prompt |
   | `/cost` | Telemetry Detail | Rincian konsumsi token prompt/completion, biaya USD, dan rata-rata TTFT |
@@ -225,6 +230,9 @@ Terminal Markdown Render → Wait Next Stdin
     /history        List previous conversation sessions
     /resume [id]    Resume saved session state
     /mcp            Show connected Model Context Protocol servers
+    /bg             List and manage background server daemons
+    /commit         Generate conventional git commit from diff
+    /pr             Create branch and submit GitHub Pull Request
     /clear          Reset conversation context & clear screen
     /map            Display AST codebase architecture skeleton
     /cost           Show token usage & estimated API cost
@@ -362,3 +370,5 @@ Terminal Markdown Render → Wait Next Stdin
 18. **Acceptance Test 17 (Lint-on-Save Self-Correction)**: Model menulis fungsi TypeScript dengan type error sengaja → background linter mendeteksi error → engine otomatis feed error ke model → model memperbaiki kode secara mandiri hingga lulus tsc.
 19. **Acceptance Test 18 (MCP Server Invocation)**: Hubungkan server `@modelcontextprotocol/server-postgres` di `mcp.json` → ketik `/mcp` → tabel menampilkan server connected; model dapat mengeksekusi query database via tool RPC.
 20. **Acceptance Test 19 (Session Resume)**: Tutup terminal saat sesi berjalan → ketik `astra --resume` di terminal baru → context 100% pulih lengkap dengan riwayat git checkpoint dan memory conversation.
+21. **Acceptance Test 20 (Background Daemon Supervisor)**: Model memanggil `proc_spawn("npm run dev", "web-server")` → dev server berjalan asinkron di background tanpa memblokir input REPL; model memverifikasi respons via `web_fetch("http://localhost:3000")` dan mematikan server via `proc_kill("web-server")`.
+22. **Acceptance Test 21 (Autonomous Commit & PR Generator)**: Setelah fitur selesai → ketik `/commit` → agent merangkum git diff jadi Conventional Commit message valid dan melakukan commit otomatis; ketik `/pr` → agent men-deploy branch dan membuat PR draft di GitHub.
