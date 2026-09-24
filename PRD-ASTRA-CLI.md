@@ -72,7 +72,7 @@ Terminal Markdown Render → Wait Next Stdin
 
 | Parameter | PLAN Mode (Architect) | BUILD Mode (Engineer) |
 |---|---|---|
-| **Terminal Badge** | `[PLAN]` (Cyan / Text-Bold) | `[BUILD]` (Emerald / Text-Bold) |
+| **Terminal Badge** | `[PLAN]` (Soft Lavender `#C084FC` / Text-Bold) | `[BUILD]` (Electric Purple `#9333EA` / Text-Bold) |
 | **System Directive** | "Analyze codebase, read files, search web, and design step-by-step implementation plan. Do NOT mutate files or run shell commands." | "Execute implementation, modify files, run tests, and verify code changes." |
 | **Allowed Tools** | `fs_read`, `fs_list`, `web_search`, `web_fetch` | **ALL TOOLS** (`bash_exec`, `fs_write`, `fs_patch`, `fs_read`, `fs_list`, `web_search`, `web_fetch`) |
 | **Filtered Tools** | `fs_write`, `fs_patch`, `bash_exec` **(Blocked)** | None |
@@ -197,8 +197,8 @@ Terminal Markdown Render → Wait Next Stdin
 
 ## 11. CLI UI & INTERACTION SPEC
 - **Dynamic Prompt String**:
-  - Plan Mode: `astra-cli [PLAN] [main*]> ` (Cyan badge)
-  - Build Mode: `astra-cli [BUILD] [main*]> ` (Emerald badge)
+  - Plan Mode: `astra-cli [PLAN] [main*]> ` (Soft Lavender `#C084FC` badge)
+  - Build Mode: `astra-cli [BUILD] [main*]> ` (Electric Purple `#9333EA` badge)
 - **Keybinding & Slash Commands Matrix**:
   | Input | Fungsi | Deskripsi |
   | :--- | :--- | :--- |
@@ -261,11 +261,18 @@ Terminal Markdown Render → Wait Next Stdin
   - Footer bar menampilkan akumulasi token & perkiraan biaya per sesi:
     `[Tokens: 3,420 in / 512 out | Session: $0.0084 | Latency: 2.1s]`
   - Membantu developer mendeteksi reseller proxy yang boros atau membengkak context-nya.
-- **Theme**: Minimalist dark CLI (Emerald primary, Cyan network/web, Rose error, Amber warning).
-- **Status Indicators**:
-  - `[DIFF] src/index.ts (+4, -1 lines)` (Purple badge).
-  - `[TOOL] web_search("react 19 router")` (Cyan pill).
-  - `[EXEC] npm test` (Emerald pill).
+- **Theme**: **Astra Cyber-Purple (Synthwave Violet Dark)**:
+  - Primary Base Accent: Neon Violet / Bright Magenta (`#C084FC` / ANSI 95 / `\x1b[38;2;192;132;252m`).
+  - Badge Background: Electric Deep Purple (`#7E22CE` / `#9333EA` / ANSI 45 / `\x1b[48;2;126;34;206m`).
+  - Secondary / Links / Web: Soft Lavender (`#E9D5FF` / ANSI 96).
+  - Terminal Borders & Dividers: Neon Purple double-line (`║`, `═`, `━`).
+- **Status Indicators (Purple Palette)**:
+  - `[PLAN]` (Soft Lavender pill `#C084FC`).
+  - `[BUILD]` (Electric Purple pill `#9333EA`).
+  - `[DIFF] src/index.ts (+4, -1 lines)` (Neon Purple badge).
+  - `[TOOL] web_search("react 19 router")` (Lavender pill).
+  - `[EXEC] npm test` (Electric Violet pill).
+  - Latency Stopwatch: Pulsing Violet Braille spinner (`⠋`).
 - **Output Renderer**: Streaming markdown token langsung ke stdout via terminal ANSI renderer.
 
 ---
