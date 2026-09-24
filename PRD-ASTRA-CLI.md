@@ -160,12 +160,20 @@ Terminal Markdown Render → Wait Next Stdin
 ---
 
 ## 9. CONTEXT MANAGEMENT & TOKEN BUDGETING
+- **Project Rule Auto-Loader (`ASTRA.md` / `AGENTS.md`)**:
+  - Engine otomatis mendeteksi keberadaan file `./ASTRA.md`, `./AGENTS.md`, atau `./.cursorrules` di root workspace saat startup.
+  - Konten aturan proyek di-injeksi langsung ke System Prompt (di bawah Persona) sebagai panduan arsitektur lokal (coding standards, preferensi library, larangan khusus tim).
+- **Persistent Context Pinning (`/add` & `/drop`)**:
+  - Developer dapat mengunci file krusial ke prompt permanen agar tidak terpotong oleh sliding window truncation:
+    - `/add <file_path>`: Membaca file dan menyematkannya ke `Pinned Context Memory`.
+    - `/drop <file_path>`: Melepaskan file dari context pinning.
 - **Max Window Threshold**: 80% dari target window model (default: 64k / 128k token).
 - **Token Estimator**: Heuristik BPE (~3.8 char/token).
 - **Compaction Strategy**:
-  - `Keep System Prompt + Repo Map`: Lock index 0 & 1 (selalu utuh).
+  - `Keep System Prompt + Repo Map + Pinned Files`: Lock index 0, 1, dan pinned files (selalu utuh).
   - `Rolling Window Tool Truncation`: Pangkas output tool lama (`fs_read`, `bash_exec`, `web_fetch`) jadi placeholder: `[Output truncated. File content previously inspected.]`.
-  - `Summary Injection`: Jika context > threshold, panggil LLM satu kali via payload khusus untuk merangkum percakapan lama → replace rentang message 2 s/d N dengan 1 summary block.
+  - `Manual Compaction (/compact)`: User dapat sewaktu-waktu mengetik `/compact` untuk meringkas riwayat percakapan secara on-demand.
+  - `Automatic Summary Injection`: Jika context > threshold, panggil LLM satu kali via payload khusus untuk merangkum percakapan lama → replace rentang message 2 s/d N dengan 1 summary block.
 
 ---
 
@@ -195,6 +203,9 @@ Terminal Markdown Render → Wait Next Stdin
   | `Tab` | Switch Mode | Toggle seketika antara mode `[PLAN]` dan `[BUILD]` |
   | `/help` | Interactive Help | Tampilkan daftar command, panduan mode, status tools, dan keybindings |
   | `/undo` | Git Rollback | Kembalikan working directory ke state sebelum turn terakhir dijalankan |
+  | `/add <path>` | Pin File | Sematkan file ke context memori permanen model |
+  | `/drop <path>` | Unpin File | Lepaskan file dari context memori permanen model |
+  | `/compact` | Manual Compact | Rangkum percakapan & kompres token history secara on-demand |
   | `/clear` | Context Reset | Bersihkan buffer terminal dan reset riwayat memori percakapan |
   | `/map` | Inspect Repo Map | Tampilkan skeleton AST codebase yang saat ini di-cache & diinjeksi ke prompt |
   | `/cost` | Telemetry Detail | Rincian konsumsi token prompt/completion, biaya USD, dan rata-rata TTFT |
@@ -205,6 +216,9 @@ Terminal Markdown Render → Wait Next Stdin
   ASTRA-CLI Commands:
     /help           Show this assistance manual
     /undo           Rollback codebase mutations from last turn
+    /add <path>     Pin file to persistent LLM context
+    /drop <path>    Unpin file from persistent LLM context
+    /compact        Compress & summarize conversation memory
     /clear          Reset conversation context & clear screen
     /map            Display AST codebase architecture skeleton
     /cost           Show token usage & estimated API cost
@@ -214,7 +228,13 @@ Terminal Markdown Render → Wait Next Stdin
   Shortcuts:
     [Tab]           Toggle PLAN (Read-only) / BUILD (Mutate)
     [Ctrl+C]        Abort current streaming or execution
+    [Alt+Enter]     Insert newline for multi-line prompts
   ```
+- **Multi-Line Input & Bracketed Paste**:
+  - Mendukung paste blok kode panjang tanpa auto-submit parsial (ANSI bracketed paste mode `\x1b[?2004h`).
+  - Ketik triple-quotes `"""` atau `Alt+Enter` / `Shift+Enter` untuk membuka multi-line input mode interaktif.
+- **Terminal Completion Bell / Sound Chime**:
+  - Saat giliran eksekusi atau streaming memakan waktu > 10 detik, terminal memicu audible bell (`\x07`) saat selesai untuk memberi notifikasi ketika developer berada di window lain.
 - **Live Latency Stopwatch & Progress Spinner**:
   - Saat request dikirim ke upstream: Terminal merender stopwatch presisi tinggi yang update setiap 100ms:
     `[Thinking... ⠋ 1.8s | TTFT: 620ms]`
@@ -278,3 +298,7 @@ Terminal Markdown Render → Wait Next Stdin
 11. **Acceptance Test 10 (Stopwatch & Telemetry)**: Kirim prompt complex → terminal menampilkan live timer berkedip `Thinking... (X.Xs)` dan mengunci `TTFT` saat token 1 muncul, diakhiri total token + cost display di status footer.
 12. **Acceptance Test 11 (.astraignore Enforcement)**: Tambahkan file rahasia `.env.production` ke `.astraignore` → suruh agent membaca isi file tersebut → engine melempar access denied tanpa mengirim konten ke prompt.
 13. **Acceptance Test 12 (Multi-File Atomic Rollback)**: Turn memodifikasi 2 file sukses dan file ke-3 gagal patch → verifikasi disk: file 1 dan 2 otomatis dikembalikan ke kondisi awal tanpa artefak tertinggal.
+14. **Acceptance Test 13 (Project Rule Auto-Load)**: Buat file `ASTRA.md` berisi aturan `"Selalu gunakan TypeScript strict mode"` → jalankan sesi baru → verifikasi pesan system prompt pertama: aturan `ASTRA.md` otomatis terinjeksi.
+15. **Acceptance Test 14 (Context Pinning /add & /drop)**: Ketik `/add src/auth.ts` → status bar menampilkan `Pinned: [src/auth.ts]` dan konten file selalu disematkan di prompt tanpa tergantung tool call `fs_read`; ketik `/drop src/auth.ts` → file terlepas dari pinned memory.
+16. **Acceptance Test 15 (Manual /compact)**: Setelah percakapan 15 giliran → ketik `/compact` → engine merangkum riwayat lama jadi 1 pesan ringkasan terkompresi dan token usage context berkurang drastis.
+17. **Acceptance Test 16 (Bracketed Paste & Audio Chime)**: Paste 200 baris kode sekaligus → terminal menerima tanpa glitch parsial; jalankan task yang memakan waktu > 10 detik → terminal membunyikan ASCII BEL chime (`\x07`) saat task selesai.
