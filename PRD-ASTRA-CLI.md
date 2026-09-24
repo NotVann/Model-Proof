@@ -178,6 +178,10 @@ Terminal Markdown Render → Wait Next Stdin
    - User harus ketik `y` / `n` di terminal sebelum eksekusi berjalan.
 3. **Zero Leaks**:
    - Larang tool mengirim nilai `.env` / `API_KEY` ke internet via tool parameters.
+4. **`.astraignore` Security & Context Filter**:
+   - Parsing file `.astraignore` di root workspace (syntax identik dengan `.gitignore`).
+   - Default ignores jika file tidak ada: `.git`, `node_modules`, `.env*`, `*.lock`, `*.pem`, `*.key`, `*.sqlite`, `dist/`, `build/`.
+   - File/folder yang match diblokir dari `fs_read`, `fs_list`, dan di-exclude dari AST Repo Map untuk mencegah kebocoran secret & ledakan context token.
 
 ---
 
@@ -186,9 +190,20 @@ Terminal Markdown Render → Wait Next Stdin
   - Plan Mode: `astra-cli [PLAN] [main*]> ` (Cyan badge)
   - Build Mode: `astra-cli [BUILD] [main*]> ` (Emerald badge)
 - **Keybinding Status Bar**: `[Tab] Switch Mode | [/undo] Rollback | [Ctrl+C] Abort | [exit] Quit`
+- **Live Latency Stopwatch & Progress Spinner**:
+  - Saat request dikirim ke upstream: Terminal merender stopwatch presisi tinggi yang update setiap 100ms:
+    `[Thinking... ⠋ 1.8s | TTFT: 620ms]`
+  - Menghitung **Time To First Token (TTFT)** untuk memonitor lag reseller proxy.
+  - Setelah stream mulai mengalir, stopwatch lanjut menghitung total generation duration:
+    `[Streaming... 3.4s (48 tok/s)]`
+  - Stopwatch berhenti saat generation/tool execution selesai dan mencatat durasi final turn:
+    `[Completed in 4.2s]`
+- **Real-Time Token & Cost Telemetry**:
+  - Footer bar menampilkan akumulasi token & perkiraan biaya per sesi:
+    `[Tokens: 3,420 in / 512 out | Session: $0.0084 | Latency: 2.1s]`
+  - Membantu developer mendeteksi reseller proxy yang boros atau membengkak context-nya.
 - **Theme**: Minimalist dark CLI (Emerald primary, Cyan network/web, Rose error, Amber warning).
 - **Status Indicators**:
-  - `Thinking...` (Braille spinner).
   - `[DIFF] src/index.ts (+4, -1 lines)` (Purple badge).
   - `[TOOL] web_search("react 19 router")` (Cyan pill).
   - `[EXEC] npm test` (Emerald pill).
@@ -205,6 +220,12 @@ Terminal Markdown Render → Wait Next Stdin
     3. Cetak UI log: `[TRANSPORT] Upstream stream disconnected. Auto-switching to Non-Streaming Atomic Mode...`
     4. Auto-fallback transport untuk turn tersebut ke `stream: false` (request satu kali, tunggu payload JSON utuh).
     5. Jitter backoff `1200ms - 2000ms` sebelum dispatch retry. Max retries: 2x.
+- **Multi-File Atomic Transaction Batching**:
+  - **Pemicu**: Model memanggil mutasi 3 file berturut-turut dalam 1 turn, tetapi file ke-3 gagal patch/error.
+  - **Handling**:
+    1. Sebelum mutasi pertama dijalankan, simpan shadow state via Git working tree checkpoint.
+    2. Jika ada salah satu patch/write yang melempar exception: Engine otomatis membatalkan file 1 dan file 2 (rollback atomic) dan mengembalikan pesan error ke model: `"Batch transaction aborted: Patch failed on file 3. Working tree restored to clean pre-turn state."`
+    3. Mencegah status codebase 'setengah matang' yang merusak build project.
 - **`Patch failed` / File Mismatch Self-Healing**:
   - **Pemicu**: Model halusinasi spasi/indentasi atau CRLF/LF file Windows berbeda dari generate model.
   - **Handling**:
@@ -229,3 +250,6 @@ Terminal Markdown Render → Wait Next Stdin
 8. **Acceptance Test 7 (Git Auto-Checkpoint & /undo)**: Jalankan prompt yang mengubah 3 file → ketik `/undo` → working directory kembali identik ke state awal dalam <0.2 detik.
 9. **Acceptance Test 8 (AST Repo Map Indexing)**: Di project berukuran 50 file → jalankan ASTRA-CLI → periksa context LLM: berisi signature kelas/fungsi ringkas <1.500 token tanpa membaca isi file utuh.
 10. **Acceptance Test 9 (Unified ANSI Diff Viewer)**: Model mengubah fungsi → terminal merender blok diff hijau/merah dengan hunk line numbers sebelum perubahan ditulis ke disk.
+11. **Acceptance Test 10 (Stopwatch & Telemetry)**: Kirim prompt complex → terminal menampilkan live timer berkedip `Thinking... (X.Xs)` dan mengunci `TTFT` saat token 1 muncul, diakhiri total token + cost display di status footer.
+12. **Acceptance Test 11 (.astraignore Enforcement)**: Tambahkan file rahasia `.env.production` ke `.astraignore` → suruh agent membaca isi file tersebut → engine melempar access denied tanpa mengirim konten ke prompt.
+13. **Acceptance Test 12 (Multi-File Atomic Rollback)**: Turn memodifikasi 2 file sukses dan file ke-3 gagal patch → verifikasi disk: file 1 dan 2 otomatis dikembalikan ke kondisi awal tanpa artefak tertinggal.
