@@ -162,10 +162,26 @@
       
       <!-- Target Configuration Panel -->
       <div class="panel rounded-lg p-3 sm:p-4 space-y-3 sm:space-y-4">
+        <!-- Audit Scope Switcher: Single vs Dual Comparator -->
+        <div class="flex items-center justify-between pb-2 border-b border-zinc-800/60">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-layer-group text-emerald-400 text-xs"></i>
+            <span class="text-xs font-mono font-medium text-zinc-200 uppercase tracking-wider" data-i18n="auditModeTitle">Audit Scope</span>
+          </div>
+          <div class="flex items-center gap-1 bg-zinc-950 p-0.5 rounded border border-zinc-800 text-[10px] font-mono">
+            <button id="btn-mode-single" type="button" class="px-2 py-0.5 rounded transition font-medium bg-zinc-850 text-emerald-400 border border-emerald-500/40">
+              <span data-i18n="modeSingle">Single Target</span>
+            </button>
+            <button id="btn-mode-compare" type="button" class="px-2 py-0.5 rounded transition font-medium text-zinc-500 hover:text-zinc-300 border border-transparent">
+              <span data-i18n="modeCompare">Dual Compare</span>
+            </button>
+          </div>
+        </div>
+
         <div class="flex items-center justify-between pb-2 border-b border-zinc-800/60">
           <div class="flex items-center gap-2">
             <i class="fa-solid fa-terminal text-emerald-400 text-xs"></i>
-            <span class="text-xs font-mono font-medium text-zinc-200 uppercase tracking-wider" data-i18n="targetEndpoint">Target Endpoint</span>
+            <span id="target-a-panel-title" class="text-xs font-mono font-medium text-zinc-200 uppercase tracking-wider" data-i18n="targetEndpoint">Target Endpoint</span>
           </div>
           <span class="text-[10px] font-mono text-zinc-500" data-i18n="zeroPersistence">Zero-Persistence</span>
         </div>
@@ -214,8 +230,17 @@
         <!-- API Key -->
         <div class="space-y-1">
           <div class="flex items-center justify-between text-xs">
-            <label class="text-zinc-400 font-medium" data-i18n="apiToken">API Token</label>
-            <span class="text-[10px] font-mono text-emerald-500/80"><i class="fa-solid fa-shield"></i> <span data-i18n="inMemory">In-Memory</span></span>
+            <div class="flex items-center gap-2">
+              <label class="text-zinc-400 font-medium" data-i18n="apiToken">API Token</label>
+              <button id="btn-preflight-ping" type="button" class="text-[10px] font-mono text-cyan-400 hover:text-cyan-300 hover:underline flex items-center gap-1 transition">
+                <i class="fa-solid fa-bolt text-[9px]"></i>
+                <span data-i18n="btnTestPing">Test Ping</span>
+              </button>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span id="ping-status-badge" class="hidden text-[10px] font-mono px-1.5 py-0.2 rounded border flex items-center gap-1"></span>
+              <span class="text-[10px] font-mono text-emerald-500/80"><i class="fa-solid fa-shield"></i> <span data-i18n="inMemory">In-Memory</span></span>
+            </div>
           </div>
           <div class="relative">
             <input type="password" id="target-api-key" placeholder="sk-..." 
@@ -301,6 +326,76 @@
 
       </div>
 
+      <!-- Target B Container (Dual Compare Mode) -->
+      <div id="target-b-container" class="hidden panel rounded-lg p-3 sm:p-4 space-y-3 border border-purple-900/60 bg-purple-950/10 transition-all duration-300">
+        <div class="flex items-center justify-between pb-2 border-b border-purple-900/40">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-server text-purple-400 text-xs"></i>
+            <span class="text-xs font-mono font-medium text-purple-200 uppercase tracking-wider" data-i18n="targetBTitle">Target B (Benchmark / Reference)</span>
+          </div>
+          <span class="text-[10px] font-mono text-purple-400/80" data-i18n="targetBSubtitle">Comparative Endpoint</span>
+        </div>
+
+        <!-- Protocol B Radio Switcher -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between text-xs">
+            <label class="text-zinc-400 font-medium" data-i18n="protocolWireSchema">Protocol Wire Schema</label>
+            <span id="detected-proto-badge-b" class="text-[10px] font-mono text-purple-400 px-1.5 py-0.2 rounded bg-purple-950/60 border border-purple-800/60 flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+              <span>AUTO</span>
+            </span>
+          </div>
+          <div class="grid grid-cols-3 p-1 bg-zinc-950 rounded-lg border border-zinc-800/80 text-[11px] sm:text-xs font-mono gap-1">
+            <button id="proto-b-auto" type="button" class="py-1 px-1 rounded-md transition-all font-medium bg-zinc-850 text-purple-400 border border-purple-500/40 leading-none">Auto</button>
+            <button id="proto-b-openai" type="button" class="py-1 px-1 rounded-md transition-all font-medium text-zinc-500 hover:text-zinc-300 border border-transparent leading-none">OpenAI</button>
+            <button id="proto-b-anthropic" type="button" class="py-1 px-1 rounded-md transition-all font-medium text-zinc-500 hover:text-zinc-300 border border-transparent leading-none">Anthropic</button>
+          </div>
+        </div>
+
+        <!-- Base URL B -->
+        <div class="space-y-1">
+          <div class="flex items-center justify-between text-xs">
+            <label class="text-zinc-400 font-medium" data-i18n="baseUrlB">Base URL (Target B)</label>
+            <span class="text-[10px] font-mono text-zinc-500">Benchmark address</span>
+          </div>
+          <input type="text" id="target-b-base-url" placeholder="https://api.openai.com/v1" 
+            class="input-field w-full rounded px-3 py-2 text-xs font-mono text-zinc-200 outline-none">
+        </div>
+
+        <!-- API Key B -->
+        <div class="space-y-1">
+          <div class="flex items-center justify-between text-xs">
+            <div class="flex items-center gap-2">
+              <label class="text-zinc-400 font-medium" data-i18n="apiTokenB">API Token B</label>
+              <button id="btn-preflight-ping-b" type="button" class="text-[10px] font-mono text-cyan-400 hover:text-cyan-300 hover:underline flex items-center gap-1 transition">
+                <i class="fa-solid fa-bolt text-[9px]"></i>
+                <span data-i18n="btnTestPing">Test Ping</span>
+              </button>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span id="ping-status-badge-b" class="hidden text-[10px] font-mono px-1.5 py-0.2 rounded border flex items-center gap-1"></span>
+              <span class="text-[10px] font-mono text-purple-400/80"><i class="fa-solid fa-shield"></i> <span data-i18n="inMemory">In-Memory</span></span>
+            </div>
+          </div>
+          <div class="relative">
+            <input type="password" id="target-b-api-key" placeholder="sk-..." 
+              class="input-field w-full rounded px-3 py-2 text-xs font-mono text-zinc-200 outline-none pr-8">
+            <button id="btn-toggle-key-b" class="absolute right-2.5 top-2 text-zinc-500 hover:text-zinc-300 text-xs">
+              <i class="fa-solid fa-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Model B Profile -->
+        <div class="space-y-1">
+          <div class="flex items-center justify-between text-xs">
+            <label class="text-zinc-400 font-medium" data-i18n="claimedModelB">Claimed Model Profile B</label>
+          </div>
+          <input type="text" id="target-b-model" placeholder="claude-3-5-sonnet-20241022 or gpt-4o" 
+            class="input-field w-full rounded px-3 py-2 text-xs font-mono text-zinc-200 outline-none">
+        </div>
+      </div>
+
       <!-- Test Vector Matrix Selector -->
       <div class="panel rounded-lg p-4 space-y-3">
         <div class="flex items-center justify-between pb-2 border-b border-zinc-800/60">
@@ -355,6 +450,72 @@
 
     <!-- Right Column: Results & Telemetry Trace -->
     <div class="lg:col-span-7 space-y-4">
+
+      <!-- Dual Comparator Results Card (Hidden in Single Mode) -->
+      <div id="dual-comparator-card" class="hidden panel rounded-lg p-4 space-y-3.5 border-l-4 border-l-purple-500 transition-all duration-300 bg-purple-950/15">
+        <div class="flex items-center justify-between border-b border-purple-900/40 pb-2.5">
+          <div class="flex items-center gap-2">
+            <div class="w-6 h-6 rounded bg-purple-950 border border-purple-800 flex items-center justify-center text-purple-400 text-xs">
+              <i class="fa-solid fa-code-compare"></i>
+            </div>
+            <div>
+              <h3 class="text-sm font-semibold text-zinc-100" data-i18n="dualComparatorTitle">Side-by-Side Dual Comparator</h3>
+              <span class="text-[10px] font-mono text-purple-400" data-i18n="dualComparatorSubtitle">Perbandingan Langsung Target A vs Target B</span>
+            </div>
+          </div>
+          <span id="dual-verdict-summary" class="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-900/60 text-purple-200 border border-purple-700 uppercase font-semibold">
+            STANDBY
+          </span>
+        </div>
+
+        <!-- Dual Comparison Matrix Table -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left font-mono text-xs border-collapse">
+            <thead>
+              <tr class="border-b border-zinc-800 text-[10px] text-zinc-500 uppercase">
+                <th class="py-1.5 px-2">Metrik Forensik</th>
+                <th class="py-1.5 px-2 text-emerald-400">Target A (Primary)</th>
+                <th class="py-1.5 px-2 text-purple-400">Target B (Benchmark)</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-zinc-800/60 text-[11px]">
+              <tr>
+                <td class="py-1.5 px-2 text-zinc-400">Model Target</td>
+                <td id="comp-model-a" class="py-1.5 px-2 text-zinc-200 truncate max-w-[140px]">-</td>
+                <td id="comp-model-b" class="py-1.5 px-2 text-zinc-200 truncate max-w-[140px]">-</td>
+              </tr>
+              <tr>
+                <td class="py-1.5 px-2 text-zinc-400">Skor Keaslian</td>
+                <td id="comp-score-a" class="py-1.5 px-2 font-bold text-zinc-200">-</td>
+                <td id="comp-score-b" class="py-1.5 px-2 font-bold text-zinc-200">-</td>
+              </tr>
+              <tr>
+                <td class="py-1.5 px-2 text-zinc-400">Status Vonis</td>
+                <td id="comp-verdict-a" class="py-1.5 px-2">-</td>
+                <td id="comp-verdict-b" class="py-1.5 px-2">-</td>
+              </tr>
+              <tr>
+                <td class="py-1.5 px-2 text-zinc-400">Avg Latensi (TTFT)</td>
+                <td id="comp-latency-a" class="py-1.5 px-2 text-zinc-300">- ms</td>
+                <td id="comp-latency-b" class="py-1.5 px-2 text-zinc-300">- ms</td>
+              </tr>
+              <tr>
+                <td class="py-1.5 px-2 text-zinc-400">Throughput (TPS)</td>
+                <td id="comp-tps-a" class="py-1.5 px-2 text-zinc-300">- TPS</td>
+                <td id="comp-tps-b" class="py-1.5 px-2 text-zinc-300">- TPS</td>
+              </tr>
+              <tr>
+                <td class="py-1.5 px-2 text-zinc-400">Temuan Kritis</td>
+                <td id="comp-findings-a" class="py-1.5 px-2 text-zinc-300">-</td>
+                <td id="comp-findings-b" class="py-1.5 px-2 text-zinc-300">-</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="dual-comparative-conclusion" class="p-2.5 rounded bg-black/40 border border-purple-900/40 text-[11px] font-sans text-zinc-300 leading-relaxed">
+          Pilih mode Dual Compare dan jalankan audit untuk melihat komparasi forensik langsung antara dua endpoint upstream.
+        </div>
+      </div>
       
       <!-- Primary Layman Executive Verdict Card -->
       <div id="layman-summary-card" class="panel rounded-lg p-4 space-y-3.5 border-l-4 border-l-zinc-700 transition-all duration-300">
@@ -392,6 +553,30 @@
           <div id="layman-evidence-list" class="space-y-1.5 text-xs">
             <!-- Dynamically populated -->
           </div>
+        </div>
+
+        <!-- Automated Cost Markup & Discrepancy Callout Box -->
+        <div id="layman-cost-markup-box" class="hidden p-3 rounded-lg border border-rose-900/60 bg-rose-950/20 text-xs font-sans space-y-2">
+          <div class="flex items-center justify-between border-b border-rose-900/40 pb-1.5 font-mono text-[11px]">
+            <span class="flex items-center gap-1.5 font-semibold text-rose-300 uppercase tracking-wider">
+              <i class="fa-solid fa-calculator text-rose-400"></i>
+              <span data-i18n="costDiscrepancyTitle">Analisis Potensi Selisih Harga / Markup Penjual</span>
+            </span>
+            <span id="cost-markup-badge" class="px-2 py-0.2 rounded font-bold bg-rose-900/80 text-rose-200 border border-rose-700">
+              +1,800% MARKUP
+            </span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-mono pt-1">
+            <div class="bg-black/40 p-2 rounded border border-rose-900/30">
+              <span class="text-zinc-500 block text-[10px]" data-i18n="claimedOfficialRate">Biaya Resmi Model yang Diklaim:</span>
+              <span id="claimed-official-price" class="text-zinc-200 font-bold block mt-0.5">$3.00 - $15.00 / 1M tk</span>
+            </div>
+            <div class="bg-black/40 p-2 rounded border border-rose-900/30">
+              <span class="text-zinc-500 block text-[10px]" data-i18n="suspectedSubstituteRate">Estimasi Biaya Model Subtitusi Riil:</span>
+              <span id="suspected-substitute-price" class="text-emerald-400 font-bold block mt-0.5">~$0.14 - $0.28 / 1M tk</span>
+            </div>
+          </div>
+          <p id="cost-markup-explanation" class="text-[11px] text-zinc-400 leading-relaxed font-sans"></p>
         </div>
 
         <!-- Heuristic Accuracy & Methodology Alert Box -->
@@ -561,6 +746,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=1.0.8"></script>
+  <script src="app.js?v=1.0.9"></script>
 </body>
 </html>

@@ -317,7 +317,23 @@ const TRANSLATIONS = {
 
     // Disclaimer
     disclaimerTitle: 'Catatan Forensik & Akurasi:',
-    disclaimerBody: 'Hasil pengujian ini bersifat heuristik berbasis probabilitas & fingerprinting teknis. Respons model bersifat non-deterministik dan fluktuasi reverse proxy dapat memengaruhi skor. Gunakan laporan ini sebagai indikasi teknis awal, bukan vonis mutlak.'
+    disclaimerBody: 'Hasil pengujian ini bersifat heuristik berbasis probabilitas & fingerprinting teknis. Respons model bersifat non-deterministik dan fluktuasi reverse proxy dapat memengaruhi skor. Gunakan laporan ini sebagai indikasi teknis awal, bukan vonis mutlak.',
+
+    // Extended Features
+    btnTestPing: 'Test Ping',
+    auditModeTitle: 'Cakupan Audit',
+    modeSingle: 'Target Tunggal',
+    modeCompare: 'Komparasi Ganda',
+    targetBTitle: 'Target B (Pembanding / Referensi)',
+    targetBSubtitle: 'Endpoint Pembanding',
+    baseUrlB: 'Base URL (Target B)',
+    apiTokenB: 'Token API B',
+    claimedModelB: 'Profil Model Target B',
+    dualComparatorTitle: 'Side-by-Side Dual Comparator',
+    dualComparatorSubtitle: 'Perbandingan Langsung Target A vs Target B',
+    costDiscrepancyTitle: 'Analisis Potensi Selisih Harga / Markup Penjual',
+    claimedOfficialRate: 'Biaya Resmi Model yang Diklaim:',
+    suspectedSubstituteRate: 'Estimasi Biaya Model Subtitusi Riil:'
   },
   en: {
     clientSandbox: 'Client-Side Sandbox',
@@ -447,18 +463,42 @@ const TRANSLATIONS = {
 
     // Disclaimer
     disclaimerTitle: 'Forensic Notice & Accuracy:',
-    disclaimerBody: 'Results are heuristic based on probabilistic fingerprinting and protocol telemetry. LLM responses are non-deterministic, and proxy network fluctuations may affect metrics. Use this report as an initial technical indication, not absolute legal proof.'
+    disclaimerBody: 'Results are heuristic based on probabilistic fingerprinting and protocol telemetry. LLM responses are non-deterministic, and proxy network fluctuations may affect metrics. Use this report as an initial technical indication, not absolute legal proof.',
+
+    // Extended Features
+    btnTestPing: 'Test Ping',
+    auditModeTitle: 'Audit Scope',
+    modeSingle: 'Single Target',
+    modeCompare: 'Dual Compare',
+    targetBTitle: 'Target B (Benchmark / Reference)',
+    targetBSubtitle: 'Comparative Endpoint',
+    baseUrlB: 'Base URL (Target B)',
+    apiTokenB: 'API Token B',
+    claimedModelB: 'Claimed Model Profile B',
+    dualComparatorTitle: 'Side-by-Side Dual Comparator',
+    dualComparatorSubtitle: 'Direct Comparison Target A vs Target B',
+    costDiscrepancyTitle: 'Potential Price Markup & Discrepancy Analysis',
+    claimedOfficialRate: 'Claimed Official Rate:',
+    suspectedSubstituteRate: 'Estimated Real Substitute Rate:'
   }
 };
 
 // App State
 const state = {
   lang: localStorage.getItem('mm_lang') || 'id', // 'id' | 'en'
+  auditMode: localStorage.getItem('mm_audit_mode') || 'single', // 'single' | 'compare'
   protocolMode: localStorage.getItem('mm_proto_mode') || 'auto', // 'auto' | 'openai' | 'anthropic'
   detectedProtocol: 'openai', // 'openai' | 'anthropic'
   baseUrl: localStorage.getItem('mm_base_url') || '',
   apiKey: localStorage.getItem('mm_api_key') || '',
   claimedModel: localStorage.getItem('mm_claimed_model') || 'claude-3-5-sonnet-20241022',
+  targetB: {
+    protocolMode: localStorage.getItem('mm_b_proto_mode') || 'auto',
+    detectedProtocol: 'openai',
+    baseUrl: localStorage.getItem('mm_b_base_url') || '',
+    apiKey: localStorage.getItem('mm_b_api_key') || '',
+    claimedModel: localStorage.getItem('mm_b_model') || 'gpt-4o'
+  },
   corsProxy: localStorage.getItem('mm_cors_proxy') || '',
   requestTimeout: parseInt(localStorage.getItem('mm_request_timeout'), 10) || 60,
   execMode: localStorage.getItem('mm_exec_mode') || 'serial', // 'serial' | 'turbo'
@@ -477,6 +517,8 @@ const el = {
   baseUrl: document.getElementById('target-base-url'),
   apiKey: document.getElementById('target-api-key'),
   btnToggleKey: document.getElementById('btn-toggle-key'),
+  btnPreflightPing: document.getElementById('btn-preflight-ping'),
+  pingStatusBadge: document.getElementById('ping-status-badge'),
   btnFetchModels: document.getElementById('btn-fetch-models'),
   inventorySanityBanner: document.getElementById('inventory-sanity-banner'),
   claimedModelCustom: document.getElementById('claimed-model-custom'),
@@ -495,6 +537,39 @@ const el = {
   timeoutDisplay: document.getElementById('timeout-display'),
   btnModeSerial: document.getElementById('btn-mode-serial'),
   btnModeTurbo: document.getElementById('btn-mode-turbo'),
+  btnModeSingle: document.getElementById('btn-mode-single'),
+  btnModeCompare: document.getElementById('btn-mode-compare'),
+  targetBContainer: document.getElementById('target-b-container'),
+  targetBBaseUrl: document.getElementById('target-b-base-url'),
+  targetBApiKey: document.getElementById('target-b-api-key'),
+  btnToggleKeyB: document.getElementById('btn-toggle-key-b'),
+  btnPreflightPingB: document.getElementById('btn-preflight-ping-b'),
+  pingStatusBadgeB: document.getElementById('ping-status-badge-b'),
+  targetBModel: document.getElementById('target-b-model'),
+  protoBAuto: document.getElementById('proto-b-auto'),
+  protoBOpenai: document.getElementById('proto-b-openai'),
+  protoBAnthropic: document.getElementById('proto-b-anthropic'),
+  detectedProtoBadgeB: document.getElementById('detected-proto-badge-b'),
+  dualComparatorCard: document.getElementById('dual-comparator-card'),
+  dualVerdictSummary: document.getElementById('dual-verdict-summary'),
+  dualComparativeConclusion: document.getElementById('dual-comparative-conclusion'),
+  compModelA: document.getElementById('comp-model-a'),
+  compModelB: document.getElementById('comp-model-b'),
+  compScoreA: document.getElementById('comp-score-a'),
+  compScoreB: document.getElementById('comp-score-b'),
+  compVerdictA: document.getElementById('comp-verdict-a'),
+  compVerdictB: document.getElementById('comp-verdict-b'),
+  compLatencyA: document.getElementById('comp-latency-a'),
+  compLatencyB: document.getElementById('comp-latency-b'),
+  compTpsA: document.getElementById('comp-tps-a'),
+  compTpsB: document.getElementById('comp-tps-b'),
+  compFindingsA: document.getElementById('comp-findings-a'),
+  compFindingsB: document.getElementById('comp-findings-b'),
+  laymanCostMarkupBox: document.getElementById('layman-cost-markup-box'),
+  costMarkupBadge: document.getElementById('cost-markup-badge'),
+  claimedOfficialPrice: document.getElementById('claimed-official-price'),
+  suspectedSubstitutePrice: document.getElementById('suspected-substitute-price'),
+  costMarkupExplanation: document.getElementById('cost-markup-explanation'),
   testCheckboxesContainer: document.getElementById('test-checkboxes-container'),
   testPipelineContainer: document.getElementById('test-pipeline-container'),
   btnSelectAll: document.getElementById('btn-select-all'),
@@ -548,7 +623,11 @@ const auditState = {
   tokenUsage: { prompt: 0, completion: 0, total: 0 },
   findings: [], // Array of { category: 'identity'|'tokens'|'logic'|'temporal'|'catalog', text: string, severity: 'critical'|'warning' }
   identifiedEntities: [],
-  lastVerdict: null
+  lastVerdict: null,
+  vectorRequests: {},
+  lastDispatchedRequest: null,
+  costDiscrepancy: null,
+  dualResults: null
 };
 
 // Update Dynamic Estimated Tokens Pill
@@ -787,7 +866,13 @@ function renderPipelineRows() {
       </div>
       <div class="test-response-drawer hidden mt-1 border-t border-zinc-800/80 pt-2 space-y-1.5">
         <div class="flex items-center justify-between text-[10px] text-zinc-500 font-mono">
-          <span class="flex items-center gap-1"><i class="fa-solid fa-terminal text-cyan-400"></i> RAW UPSTREAM OUTPUT</span>
+          <div class="flex items-center gap-2">
+            <span class="flex items-center gap-1"><i class="fa-solid fa-terminal text-cyan-400"></i> RAW UPSTREAM OUTPUT</span>
+            <button type="button" class="btn-copy-curl px-1.5 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-cyan-300 border border-zinc-700 hover:border-cyan-500/50 flex items-center gap-1 transition text-[9px]">
+              <i class="fa-regular fa-copy text-[8px]"></i>
+              <span>Copy cURL</span>
+            </button>
+          </div>
           <span class="test-response-meta text-zinc-400"></span>
         </div>
         <pre class="test-response-pre max-h-48 overflow-y-auto p-2 rounded bg-black/60 border border-zinc-800 text-[11px] font-mono text-zinc-300 whitespace-pre-wrap break-all select-text selection:bg-emerald-950 selection:text-emerald-300"></pre>
@@ -808,6 +893,20 @@ function renderPipelineRows() {
         btnToggle.classList.remove('bg-zinc-700', 'text-white');
       }
     });
+
+    // Copy cURL button handler
+    const btnCopyCurl = row.querySelector('.btn-copy-curl');
+    if (btnCopyCurl) {
+      btnCopyCurl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const cmd = generateCurlCommand(t.id);
+        navigator.clipboard.writeText(cmd).then(() => {
+          showToast(state.lang === 'en' ? `Vector ${t.id} cURL copied!` : `Perintah cURL Vektor ${t.id} disalin!`, 'success');
+        }).catch(err => {
+          showToast('Failed to copy cURL: ' + err.message, 'error');
+        });
+      });
+    }
 
     el.testPipelineContainer.appendChild(row);
   });
@@ -1083,6 +1182,10 @@ function initUI() {
   if (state.apiKey) el.apiKey.value = state.apiKey;
   if (state.corsProxy) el.corsProxyPrefix.value = state.corsProxy;
 
+  if (el.targetBBaseUrl && state.targetB.baseUrl) el.targetBBaseUrl.value = state.targetB.baseUrl;
+  if (el.targetBApiKey && state.targetB.apiKey) el.targetBApiKey.value = state.targetB.apiKey;
+  if (el.targetBModel && state.targetB.claimedModel) el.targetBModel.value = state.targetB.claimedModel;
+
   const foundModel = catalogModels.find(m => m.id === state.claimedModel);
   if (foundModel) {
     selectModel(foundModel.id, foundModel.name || foundModel.id);
@@ -1112,11 +1215,318 @@ function initUI() {
     el.langBtnEn.addEventListener('click', () => setLanguage('en'));
   }
 
-  // Set initial language
+  // Mode single vs dual compare listeners
+  if (el.btnModeSingle) el.btnModeSingle.addEventListener('click', () => setAuditMode('single'));
+  if (el.btnModeCompare) el.btnModeCompare.addEventListener('click', () => setAuditMode('compare'));
+
+  // Preflight fast ping listeners
+  if (el.btnPreflightPing) el.btnPreflightPing.addEventListener('click', () => pingEndpoint(false));
+  if (el.btnPreflightPingB) el.btnPreflightPingB.addEventListener('click', () => pingEndpoint(true));
+
+  // Target B input listeners
+  if (el.targetBBaseUrl) {
+    el.targetBBaseUrl.addEventListener('input', (e) => {
+      state.targetB.baseUrl = e.target.value.trim();
+      localStorage.setItem('mm_b_base_url', state.targetB.baseUrl);
+    });
+  }
+  if (el.targetBApiKey) {
+    el.targetBApiKey.addEventListener('input', (e) => {
+      state.targetB.apiKey = e.target.value.trim();
+      localStorage.setItem('mm_b_api_key', state.targetB.apiKey);
+    });
+  }
+  if (el.btnToggleKeyB) {
+    el.btnToggleKeyB.addEventListener('click', () => {
+      const isPwd = el.targetBApiKey.type === 'password';
+      el.targetBApiKey.type = isPwd ? 'text' : 'password';
+      el.btnToggleKeyB.innerHTML = isPwd ? '<i class="fa-solid fa-eye-slash"></i>' : '<i class="fa-solid fa-eye"></i>';
+    });
+  }
+  if (el.targetBModel) {
+    el.targetBModel.addEventListener('input', (e) => {
+      state.targetB.claimedModel = e.target.value.trim() || 'gpt-4o';
+      localStorage.setItem('mm_b_model', state.targetB.claimedModel);
+    });
+  }
+  if (el.protoBAuto) {
+    el.protoBAuto.addEventListener('click', () => {
+      state.targetB.protocolMode = 'auto';
+      localStorage.setItem('mm_b_proto_mode', 'auto');
+      updateProtocolBUI();
+    });
+  }
+  if (el.protoBOpenai) {
+    el.protoBOpenai.addEventListener('click', () => {
+      state.targetB.protocolMode = 'openai';
+      localStorage.setItem('mm_b_proto_mode', 'openai');
+      updateProtocolBUI();
+    });
+  }
+  if (el.protoBAnthropic) {
+    el.protoBAnthropic.addEventListener('click', () => {
+      state.targetB.protocolMode = 'anthropic';
+      localStorage.setItem('mm_b_proto_mode', 'anthropic');
+      updateProtocolBUI();
+    });
+  }
+
+  // Set initial language and modes
   setLanguage(state.lang);
+  setAuditMode(state.auditMode);
   updateEstimatedTokens();
   updateProtocolUI();
+  updateProtocolBUI();
   updateExecModeUI();
+}
+
+function setAuditMode(mode) {
+  state.auditMode = mode === 'compare' ? 'compare' : 'single';
+  localStorage.setItem('mm_audit_mode', state.auditMode);
+
+  if (state.auditMode === 'compare') {
+    if (el.btnModeSingle) el.btnModeSingle.className = 'px-2 py-0.5 rounded transition font-medium text-zinc-500 hover:text-zinc-300 border border-transparent';
+    if (el.btnModeCompare) el.btnModeCompare.className = 'px-2 py-0.5 rounded transition font-medium bg-zinc-850 text-purple-400 border border-purple-500/40';
+    if (el.targetBContainer) el.targetBContainer.classList.remove('hidden');
+    if (el.dualComparatorCard) el.dualComparatorCard.classList.remove('hidden');
+    const targetAPanelTitle = document.getElementById('target-a-panel-title');
+    if (targetAPanelTitle) targetAPanelTitle.textContent = state.lang === 'en' ? 'Target A (Primary)' : 'Target A (Utama)';
+    if (el.btnStartAudit) {
+      const span = el.btnStartAudit.querySelector('span');
+      if (span) span.textContent = state.lang === 'en' ? 'Launch Dual Comparison Scan (A vs B)' : 'Mulai Audit Komparasi (A vs B)';
+    }
+  } else {
+    if (el.btnModeSingle) el.btnModeSingle.className = 'px-2 py-0.5 rounded transition font-medium bg-zinc-850 text-emerald-400 border border-emerald-500/40';
+    if (el.btnModeCompare) el.btnModeCompare.className = 'px-2 py-0.5 rounded transition font-medium text-zinc-500 hover:text-zinc-300 border border-transparent';
+    if (el.targetBContainer) el.targetBContainer.classList.add('hidden');
+    if (el.dualComparatorCard) el.dualComparatorCard.classList.add('hidden');
+    const targetAPanelTitle = document.getElementById('target-a-panel-title');
+    if (targetAPanelTitle) targetAPanelTitle.textContent = state.lang === 'en' ? 'Target Endpoint' : 'Endpoint Target';
+    if (el.btnStartAudit) {
+      const span = el.btnStartAudit.querySelector('span');
+      if (span) span.textContent = state.lang === 'en' ? 'Launch Forensic Scan' : 'Mulai Pindai Forensik';
+    }
+  }
+}
+
+function updateProtocolBUI() {
+  if (!el.protoBAuto) return;
+  const activeClass = 'py-1 px-1 rounded-md transition-all font-medium bg-zinc-850 text-purple-400 border border-purple-500/40 leading-none';
+  const inactiveClass = 'py-1 px-1 rounded-md transition-all font-medium text-zinc-500 hover:text-zinc-300 border border-transparent leading-none';
+
+  if (state.targetB.protocolMode === 'auto') {
+    el.protoBAuto.className = activeClass;
+    el.protoBOpenai.className = inactiveClass;
+    el.protoBAnthropic.className = inactiveClass;
+    if (el.detectedProtoBadgeB) el.detectedProtoBadgeB.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span><span>AUTO</span>';
+  } else if (state.targetB.protocolMode === 'openai') {
+    el.protoBAuto.className = inactiveClass;
+    el.protoBOpenai.className = activeClass;
+    el.protoBAnthropic.className = inactiveClass;
+    if (el.detectedProtoBadgeB) el.detectedProtoBadgeB.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span><span>OPENAI</span>';
+  } else {
+    el.protoBAuto.className = inactiveClass;
+    el.protoBOpenai.className = inactiveClass;
+    el.protoBAnthropic.className = activeClass;
+    if (el.detectedProtoBadgeB) el.detectedProtoBadgeB.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span><span>ANTHROPIC</span>';
+  }
+}
+
+// Pre-Flight Fast Ping & Healthcheck
+async function pingEndpoint(isTargetB = false) {
+  const targetUrl = isTargetB ? (el.targetBBaseUrl?.value || state.targetB.baseUrl) : (el.baseUrl?.value || state.baseUrl);
+  const targetKey = isTargetB ? (el.targetBApiKey?.value || state.targetB.apiKey) : (el.apiKey?.value || state.apiKey);
+  const targetModel = isTargetB ? (el.targetBModel?.value || state.targetB.claimedModel || 'gpt-4o') : (state.claimedModel || 'gpt-4o');
+  const badge = isTargetB ? el.pingStatusBadgeB : el.pingStatusBadge;
+
+  if (!targetKey) {
+    showToast(state.lang === 'en' ? 'Provide an API Token first.' : 'Isi Token API terlebih dahulu.', 'warn');
+    if (isTargetB && el.targetBApiKey) el.targetBApiKey.focus();
+    else if (el.apiKey) el.apiKey.focus();
+    return;
+  }
+
+  if (badge) {
+    badge.classList.remove('hidden');
+    badge.className = 'text-[10px] font-mono px-1.5 py-0.2 rounded border flex items-center gap-1 bg-cyan-950/60 border-cyan-800 text-cyan-300';
+    badge.innerHTML = `<svg class="w-2.5 h-2.5 text-cyan-400 animate-spin-fast shrink-0" viewBox="0 0 50 50"><circle class="opacity-20" cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="4"></circle><circle class="spinner-circle-morph" cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="4"></circle></svg> <span>PINGING...</span>`;
+  }
+
+  appendLog(`[Preflight Ping] Pinging target ${isTargetB ? 'B' : 'A'} (${targetModel} @ ${targetUrl || 'default'})...`);
+
+  const t0 = performance.now();
+  let proto = 'openai';
+  const urlLower = (targetUrl || '').toLowerCase();
+  if (urlLower.includes('anthropic.com')) proto = 'anthropic';
+
+  let cleanBase = (targetUrl || (proto === 'openai' ? 'https://api.openai.com/v1' : 'https://api.anthropic.com/v1')).replace(/\/+$/, '');
+  let endpoint = proto === 'openai' ? `${cleanBase}/chat/completions` : `${cleanBase}/messages`;
+  if (state.corsProxy) endpoint = state.corsProxy + endpoint;
+
+  let headers = {};
+  let body = {};
+
+  if (proto === 'openai') {
+    headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${targetKey}` };
+    body = { model: targetModel, messages: [{ role: 'user', content: 'ping' }], max_tokens: 1 };
+  } else {
+    headers = { 'Content-Type': 'application/json', 'x-api-key': targetKey, 'anthropic-version': '2023-06-01' };
+    body = { model: targetModel, messages: [{ role: 'user', content: 'ping' }], max_tokens: 1 };
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    const latency = Math.round(performance.now() - t0);
+
+    if (res.ok) {
+      if (badge) {
+        badge.className = 'text-[10px] font-mono px-1.5 py-0.2 rounded border flex items-center gap-1 bg-emerald-950/60 border-emerald-800 text-emerald-300';
+        badge.innerHTML = `<i class="fa-solid fa-check text-emerald-400 text-[9px]"></i> <span>${latency}ms OK</span>`;
+      }
+      appendLog(`[Preflight Ping] ${isTargetB ? 'Target B' : 'Target A'} alive (${latency}ms, HTTP ${res.status}).`, 'success');
+      showToast(state.lang === 'en' ? `Target ${isTargetB ? 'B' : 'A'} Ready: ${latency}ms latency.` : `Target ${isTargetB ? 'B' : 'A'} Siap: Latensi ${latency}ms.`, 'success');
+    } else {
+      let statusText = `HTTP ${res.status}`;
+      let colorClass = 'bg-rose-950/60 border-rose-800 text-rose-300';
+      if (res.status === 401) {
+        statusText = '401 Invalid Key';
+      } else if (res.status === 429) {
+        statusText = '429 No Quota';
+        colorClass = 'bg-amber-950/60 border-amber-800 text-amber-300';
+      } else if (res.status === 404) {
+        statusText = '404 Not Found';
+      }
+
+      if (badge) {
+        badge.className = `text-[10px] font-mono px-1.5 py-0.2 rounded border flex items-center gap-1 ${colorClass}`;
+        badge.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-[9px]"></i> <span>${statusText}</span>`;
+      }
+      appendLog(`[Preflight Ping] ${isTargetB ? 'Target B' : 'Target A'} error: ${statusText} (${latency}ms).`, 'warn');
+    }
+  } catch (err) {
+    const latency = Math.round(performance.now() - t0);
+    const errMsg = err.name === 'AbortError' ? 'Timeout' : 'Network/CORS';
+    if (badge) {
+      badge.className = 'text-[10px] font-mono px-1.5 py-0.2 rounded border flex items-center gap-1 bg-rose-950/60 border-rose-800 text-rose-300';
+      badge.innerHTML = `<i class="fa-solid fa-xmark text-rose-400 text-[9px]"></i> <span>${errMsg}</span>`;
+    }
+    appendLog(`[Preflight Ping] ${isTargetB ? 'Target B' : 'Target A'} failed: ${err.message} (${latency}ms).`, 'error');
+  }
+}
+
+// Automated Cost Markup & Price Discrepancy Calculator
+const MODEL_PRICING_TABLE = {
+  'claude-3-7-sonnet': { input: 3.00, output: 15.00, name: 'Claude 3.7 Sonnet' },
+  'claude-3-5-sonnet': { input: 3.00, output: 15.00, name: 'Claude 3.5 Sonnet' },
+  'claude-3-5-haiku': { input: 0.80, output: 4.00, name: 'Claude 3.5 Haiku' },
+  'claude-3-opus': { input: 15.00, output: 75.00, name: 'Claude 3 Opus' },
+  'gpt-4o': { input: 2.50, output: 10.00, name: 'GPT-4o' },
+  'gpt-4o-mini': { input: 0.15, output: 0.60, name: 'GPT-4o mini' },
+  'o1': { input: 15.00, output: 60.00, name: 'o1' },
+  'o3-mini': { input: 1.10, output: 4.40, name: 'o3-mini' },
+  'gemini-1.5-pro': { input: 1.25, output: 5.00, name: 'Gemini 1.5 Pro' },
+  'gemini-2.0-flash': { input: 0.10, output: 0.40, name: 'Gemini 2.0 Flash' },
+  'deepseek-chat': { input: 0.14, output: 0.28, name: 'DeepSeek-V3' },
+  'deepseek-reasoner': { input: 0.55, output: 2.19, name: 'DeepSeek-R1' },
+  'llama-3.3-70b': { input: 0.40, output: 0.80, name: 'Llama 3.3 70B' },
+  'llama-3.1-8b': { input: 0.05, output: 0.08, name: 'Llama 3.1 8B' },
+  'qwen-2.5-72b': { input: 0.35, output: 0.70, name: 'Qwen 2.5 72B' },
+  'qwen-2.5-7b': { input: 0.06, output: 0.10, name: 'Qwen 2.5 7B' }
+};
+
+function getModelPrice(modelId) {
+  const m = (modelId || '').toLowerCase();
+  for (const [key, val] of Object.entries(MODEL_PRICING_TABLE)) {
+    if (m.includes(key)) return val;
+  }
+  if (m.includes('claude-3-5') || m.includes('sonnet')) return MODEL_PRICING_TABLE['claude-3-5-sonnet'];
+  if (m.includes('opus')) return MODEL_PRICING_TABLE['claude-3-opus'];
+  if (m.includes('haiku')) return MODEL_PRICING_TABLE['claude-3-5-haiku'];
+  if (m.includes('gpt-4o-mini') || m.includes('4o-mini')) return MODEL_PRICING_TABLE['gpt-4o-mini'];
+  if (m.includes('gpt-4') || m.includes('4o')) return MODEL_PRICING_TABLE['gpt-4o'];
+  if (m.includes('o1')) return MODEL_PRICING_TABLE['o1'];
+  if (m.includes('o3')) return MODEL_PRICING_TABLE['o3-mini'];
+  if (m.includes('deepseek')) return MODEL_PRICING_TABLE['deepseek-chat'];
+  if (m.includes('llama')) return MODEL_PRICING_TABLE['llama-3.1-8b'];
+  if (m.includes('qwen')) return MODEL_PRICING_TABLE['qwen-2.5-7b'];
+  return { input: 3.00, output: 15.00, name: modelId || 'Flagship Model' };
+}
+
+function computeCostDiscrepancy(claimedModel, verdictLevel, findings, identifiedEntities) {
+  if (verdictLevel === 'genuine') {
+    if (el.laymanCostMarkupBox) el.laymanCostMarkupBox.classList.add('hidden');
+    auditState.costDiscrepancy = null;
+    return null;
+  }
+
+  const isEn = state.lang === 'en';
+  const claimedPrice = getModelPrice(claimedModel);
+  const claimedBlended = (claimedPrice.input * 0.4 + claimedPrice.output * 0.6);
+
+  // Identify suspected substitute model
+  let substitutePrice = null;
+  let substituteName = '';
+
+  if (identifiedEntities && identifiedEntities.length > 0) {
+    const ent = identifiedEntities[0].name.toLowerCase();
+    if (ent.includes('deepseek')) {
+      substitutePrice = MODEL_PRICING_TABLE['deepseek-chat'];
+      substituteName = 'DeepSeek-V3';
+    } else if (ent.includes('llama')) {
+      substitutePrice = MODEL_PRICING_TABLE['llama-3.1-8b'];
+      substituteName = 'Llama 3.1 8B';
+    } else if (ent.includes('qwen')) {
+      substitutePrice = MODEL_PRICING_TABLE['qwen-2.5-7b'];
+      substituteName = 'Qwen 2.5 7B';
+    }
+  }
+
+  if (!substitutePrice) {
+    if (verdictLevel === 'fake') {
+      substitutePrice = MODEL_PRICING_TABLE['llama-3.1-8b'];
+      substituteName = isEn ? 'Budget Open-Source LLM (Llama 8B / Qwen 7B)' : 'Model Budget Terbuka (Llama 8B / Qwen 7B)';
+    } else {
+      substitutePrice = MODEL_PRICING_TABLE['gpt-4o-mini'];
+      substituteName = isEn ? 'Mini/Quantized Proxy Router' : 'Proxy Router Model Mini/Kuantisasi';
+    }
+  }
+
+  const substituteBlended = (substitutePrice.input * 0.4 + substitutePrice.output * 0.6);
+  const markupRatio = Math.max(1, Math.round(claimedBlended / substituteBlended));
+  const markupPercent = Math.round((claimedBlended / substituteBlended - 1) * 100);
+
+  const result = {
+    claimedName: claimedPrice.name,
+    claimedRate: `$${claimedPrice.input.toFixed(2)} - $${claimedPrice.output.toFixed(2)} / 1M tk`,
+    substituteName,
+    substituteRate: `~$${substitutePrice.input.toFixed(2)} - $${substitutePrice.output.toFixed(2)} / 1M tk`,
+    markupRatio: `${markupRatio}x`,
+    markupPercent: `+${markupPercent.toLocaleString()}%`
+  };
+
+  auditState.costDiscrepancy = result;
+
+  if (el.laymanCostMarkupBox) {
+    el.laymanCostMarkupBox.classList.remove('hidden');
+    if (el.costMarkupBadge) el.costMarkupBadge.textContent = `${result.markupPercent} MARKUP (${result.markupRatio})`;
+    if (el.claimedOfficialPrice) el.claimedOfficialPrice.textContent = `${result.claimedName}: ${result.claimedRate}`;
+    if (el.suspectedSubstitutePrice) el.suspectedSubstitutePrice.textContent = `${result.substituteName}: ${result.substituteRate}`;
+    if (el.costMarkupExplanation) {
+      el.costMarkupExplanation.textContent = isEn
+        ? `Upstream provider is charging official flagship rates while routing requests to a substitute model costing up to ${result.markupRatio} cheaper. This creates an estimated ${result.markupPercent} arbitrage profit margin at buyer expense.`
+        : `Penyedia upstream membebankan tarif flagship resmi padahal request diduga dialihkan ke model subtitusi yang ${result.markupRatio} lebih murah. Penjual meraup potensi margin arbitrase hingga ${result.markupPercent} dari biaya yang Anda bayarkan.`;
+    }
+  }
+
+  return result;
 }
 
 function updateProtocolUI() {
@@ -1504,6 +1914,12 @@ async function callModel({ messages, stream = false, maxTokens = 500, temperatur
 
   if (state.corsProxy) endpoint = state.corsProxy + endpoint;
 
+  auditState.lastDispatchedRequest = {
+    endpoint,
+    headers: { ...headers },
+    body: { ...body }
+  };
+
   const maxRetries = 1;
   let attempt = 0;
   let lastErr = null;
@@ -1622,6 +2038,18 @@ async function callModel({ messages, stream = false, maxTokens = 500, temperatur
   throw lastErr || new Error('Request execution failed after retries.');
 }
 
+function generateCurlCommand(testId) {
+  const req = auditState.vectorRequests?.[testId] || auditState.lastDispatchedRequest;
+  if (!req) {
+    return `# Vector ${testId} request not recorded. Run scan first.`;
+  }
+  const headersPart = Object.entries(req.headers || {})
+    .map(([k, v]) => `  -H "${k}: ${v}"`)
+    .join(' \\\n');
+  const bodyPart = JSON.stringify(req.body, null, 2);
+  return `curl -X POST "${req.endpoint}" \\\n${headersPart} \\\n  -d '${bodyPart.replace(/'/g, "'\\''")}'`;
+}
+
 function updateTestRow(testId, status, detailText = null, rawResponse = null, metaInfo = null) {
   const row = document.getElementById(`test-row-${testId}`);
   if (!row) return;
@@ -1638,6 +2066,9 @@ function updateTestRow(testId, status, detailText = null, rawResponse = null, me
     if (drawerPre) drawerPre.textContent = typeof rawResponse === 'object' ? JSON.stringify(rawResponse, null, 2) : String(rawResponse);
     if (drawerMeta && metaInfo) drawerMeta.textContent = metaInfo;
     if (btnToggle) btnToggle.classList.remove('hidden');
+    if (auditState.lastDispatchedRequest) {
+      auditState.vectorRequests[testId] = auditState.lastDispatchedRequest;
+    }
   }
 
   if (status === 'RUNNING') {
@@ -1873,6 +2304,9 @@ function renderLaymanSummary(scorePercentage, results) {
     el.laymanEvidenceContainer.classList.add('hidden');
   }
 
+  // Compute and Render Potential Cost Markup / Price Discrepancy
+  computeCostDiscrepancy(state.claimedModel, verdictLevel, uniqueFindings, auditState.identifiedEntities);
+
   // Update Technical Drawer Toggle Label
   const count = results ? results.length : TEST_REGISTRY.length;
   el.techDetailsBtnLabel.textContent = isEn 
@@ -1896,6 +2330,14 @@ function copyComplaintDraft() {
       : `- Skor pengujian forensik adalah ${v.scorePercentage}% dari total ${TEST_REGISTRY.length} vektor uji.`;
   }
 
+  let markupNote = '';
+  if (auditState.costDiscrepancy) {
+    const cd = auditState.costDiscrepancy;
+    markupNote = isEn
+      ? `\n\nPrice Discrepancy & Arbitrage Markup:\n- Claimed Official Rate (${cd.claimedName}): ${cd.claimedRate}\n- Suspected Real Rate (${cd.substituteName}): ${cd.substituteRate}\n- Estimated Seller Arbitrage Markup: ${cd.markupPercent} (${cd.markupRatio})\n`
+      : `\n\nSelisih Harga & Potensi Markup Arbitrase:\n- Biaya Model Resmi (${cd.claimedName}): ${cd.claimedRate}\n- Estimasi Model Riil (${cd.substituteName}): ${cd.substituteRate}\n- Estimasi Keuntungan Markup Penjual: ${cd.markupPercent} (${cd.markupRatio})\n`;
+  }
+
   let complaintText = '';
 
   if (isEn) {
@@ -1910,7 +2352,7 @@ After conducting a technical forensic audit via AI Model Mask Checker on:
 
 Findings & Technical Forensic Notes:
 
-${evidenceBullets}
+${evidenceBullets}${markupNote}
 
 Disclaimer Notice:
 ⚠️ This technical audit is heuristic-based on probabilistic fingerprinting and wire telemetry. Responses are non-deterministic and proxy server queue delays can affect metrics. Please verify internal configuration or process a refund. Thank you!`;
@@ -1926,7 +2368,7 @@ Setelah saya lakukan audit forensik teknis menggunakan AI Model Mask Checker pad
 
 Catatan & Temuan Pengujian:
 
-${evidenceBullets}
+${evidenceBullets}${markupNote}
 
 Catatan Forensik:
 ⚠️ Hasil pengujian ini bersifat heuristik berbasis probabilitas & fingerprinting teknis. Respons model bersifat non-deterministik dan fluktuasi reverse proxy dapat memengaruhi skor. Mohon dicek kembali konfigurasi endpoint tersebut atau proses penyesuaian/refund jika model tidak sesuai spesifikasi resmi. Terima kasih!`;
@@ -1952,6 +2394,12 @@ function exportMdDossier() {
     findingsMd = v.findings.map((f, i) => `### ${i + 1}. [${f.severity.toUpperCase()}] ${f.headline}\n${f.desc}`).join('\n\n');
   } else {
     findingsMd = '_No critical discrepancies or spoofing indicators detected._';
+  }
+
+  let markupMd = '';
+  if (auditState.costDiscrepancy) {
+    const cd = auditState.costDiscrepancy;
+    markupMd = `\n## 4. Cost Discrepancy & Arbitrage Analysis\n- **Claimed Model Profile (${cd.claimedName})**: \`${cd.claimedRate}\`\n- **Suspected Substitute (${cd.substituteName})**: \`${cd.substituteRate}\`\n- **Estimated Arbitrage Markup**: **\`${cd.markupPercent} (${cd.markupRatio})\`**\n`;
   }
 
   // Active tests status breakdown table
@@ -1983,13 +2431,13 @@ Generated by [ModelProof AI Mask Checker](https://notvann.github.io/Model-Proof/
 
 ## 3. Discrepancy Findings & Forensic Notes
 ${findingsMd}
-
-## 4. Vector Probe Breakdown Matrix
+${markupMd}
+## 5. Vector Probe Breakdown Matrix
 | ID | Vector Engine | Result | Forensic Observation |
 |---|---|---|---|
 ${testRowsMd}
 
-## 5. Forensic Notice & Methodology Disclaimer
+## 6. Forensic Notice & Methodology Disclaimer
 > ⚠️ **Catatan Forensik / Accuracy Notice**:
 > Hasil pengujian ini bersifat heuristik berbasis probabilitas & fingerprinting teknis. Respons model LLM bersifat non-deterministik dan fluktuasi reverse proxy (antrean server/penjual) dapat memengaruhi skor atau memicu timeout. Gunakan laporan ini sebagai indikasi teknis awal dan bahan verifikasi bersama seller, bukan vonis mutlak.
 
@@ -3123,6 +3571,68 @@ async function runTest16() {
   }
 }
 
+// Dual Comparator Presentation Engine
+function renderDualComparison(statsA, statsB) {
+  if (!el.dualComparatorCard) return;
+  el.dualComparatorCard.classList.remove('hidden');
+
+  if (el.compModelA) el.compModelA.textContent = statsA.model;
+  if (el.compModelB) el.compModelB.textContent = statsB.model;
+
+  if (el.compScoreA) {
+    el.compScoreA.textContent = `${statsA.score}%`;
+    el.compScoreA.className = `py-1.5 px-2 font-bold ${statsA.score >= 80 ? 'text-emerald-400' : statsA.score >= 50 ? 'text-amber-400' : 'text-rose-400'}`;
+  }
+  if (el.compScoreB) {
+    el.compScoreB.textContent = `${statsB.score}%`;
+    el.compScoreB.className = `py-1.5 px-2 font-bold ${statsB.score >= 80 ? 'text-emerald-400' : statsB.score >= 50 ? 'text-amber-400' : 'text-rose-400'}`;
+  }
+
+  if (el.compVerdictA) {
+    el.compVerdictA.innerHTML = `<span class="px-1.5 py-0.2 rounded font-mono text-[9px] uppercase ${statsA.verdict === 'genuine' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : statsA.verdict === 'suspicious' ? 'bg-amber-950 text-amber-400 border border-amber-800' : 'bg-rose-950 text-rose-400 border border-rose-800'}">${statsA.verdict.toUpperCase()}</span>`;
+  }
+  if (el.compVerdictB) {
+    el.compVerdictB.innerHTML = `<span class="px-1.5 py-0.2 rounded font-mono text-[9px] uppercase ${statsB.verdict === 'genuine' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : statsB.verdict === 'suspicious' ? 'bg-amber-950 text-amber-400 border border-amber-800' : 'bg-rose-950 text-rose-400 border border-rose-800'}">${statsB.verdict.toUpperCase()}</span>`;
+  }
+
+  if (el.compLatencyA) el.compLatencyA.textContent = statsA.ttft;
+  if (el.compLatencyB) el.compLatencyB.textContent = statsB.ttft;
+  if (el.compTpsA) el.compTpsA.textContent = statsA.tps;
+  if (el.compTpsB) el.compTpsB.textContent = statsB.tps;
+
+  if (el.compFindingsA) el.compFindingsA.textContent = `${statsA.findingsCount} anomali`;
+  if (el.compFindingsB) el.compFindingsB.textContent = `${statsB.findingsCount} anomali`;
+
+  const isEn = state.lang === 'en';
+  let summaryVerdict = 'DIVERGENCE CONFIRMED';
+  let conclusionText = '';
+
+  if (statsA.score >= 80 && statsB.score >= 80) {
+    summaryVerdict = isEn ? 'PARITY: BOTH GENUINE' : 'PARITAS: KEDUANYA ASLI';
+    conclusionText = isEn
+      ? `Both Target A (${statsA.score}%) and Target B (${statsB.score}%) passed technical forensic vectors with consistent genuine performance.`
+      : `Kedua endpoint Target A (${statsA.score}%) dan Target B (${statsB.score}%) berhasil lolos seluruh vektor uji forensik dengan performa konsisten.`;
+  } else if (statsA.score < 80 && statsB.score >= 80) {
+    summaryVerdict = isEn ? 'TARGET A DOWNGRADED' : 'TARGET A DOWNGRADE/MASKING';
+    conclusionText = isEn
+      ? `Target B verified as genuine flagship (${statsB.score}%), whereas Target A (${statsA.score}%) failed logic/identity vectors. Strong forensic proof of proxy spoofing on Target A.`
+      : `Target B terverifikasi sebagai model flagship resmi (${statsB.score}%), sedangkan Target A (${statsA.score}%) gagal pada uji logika/identitas. Bukti komparatif kuat bahwa Target A adalah hasil spoofing/downgrade.`;
+  } else if (statsA.score >= 80 && statsB.score < 80) {
+    summaryVerdict = isEn ? 'TARGET B DOWNGRADED' : 'TARGET B DOWNGRADE/MASKING';
+    conclusionText = isEn
+      ? `Target A verified genuine (${statsA.score}%), while Target B benchmark (${statsB.score}%) exhibits proxy masking or inferior architecture.`
+      : `Target A terverifikasi asli (${statsA.score}%), sedangkan Target B (${statsB.score}%) menunjukkan anomali atau arsitektur model lebih rendah.`;
+  } else {
+    summaryVerdict = isEn ? 'BOTH SPOOFED / DOWNGRADED' : 'KEDUANYA GAGAL / SPOOFED';
+    conclusionText = isEn
+      ? `Both Target A (${statsA.score}%) and Target B (${statsB.score}%) failed multiple forensic vectors, indicating neither endpoint provides the genuine official flagship model.`
+      : `Kedua endpoint Target A (${statsA.score}%) maupun Target B (${statsB.score}%) sama-sama gagal pada pengujian forensik, mengindikasikan keduanya bukan model flagship resmi.`;
+  }
+
+  if (el.dualVerdictSummary) el.dualVerdictSummary.textContent = summaryVerdict;
+  if (el.dualComparativeConclusion) el.dualComparativeConclusion.textContent = conclusionText;
+}
+
 // ----------------------------------------------------
 // AUDIT RUNNER
 // ----------------------------------------------------
@@ -3132,6 +3642,14 @@ async function startAudit() {
     showToast('Missing target API Key. Please provide an API token before initiating scan.', 'error');
     el.apiKey.focus();
     return;
+  }
+  if (state.auditMode === 'compare') {
+    const keyB = el.targetBApiKey?.value || state.targetB.apiKey;
+    if (!keyB) {
+      showToast('Missing Target B API Key for Dual Compare.', 'error');
+      if (el.targetBApiKey) el.targetBApiKey.focus();
+      return;
+    }
   }
   if (state.selectedTests.length === 0) {
     showToast('Zero vectors selected. Please enable at least 1 fingerprint vector.', 'warn');
@@ -3291,6 +3809,79 @@ async function startAudit() {
       showToast(state.lang === 'en' ? `Critical: Model failed test vectors (${v.scorePercentage}% score).` : `Kritis: Model gagal pada vektor pengujian (Skor ${v.scorePercentage}%).`, 'error');
     }
 
+    // Phase 2: Dual Comparator Execution
+    if (state.auditMode === 'compare') {
+      const statsA = {
+        model: state.claimedModel,
+        endpoint: state.baseUrl || 'Default',
+        score: scorePercentage,
+        verdict: v.verdictLevel,
+        ttft: el.statTtft?.textContent || '-',
+        tps: el.statTps?.textContent || '-',
+        findingsCount: (auditState.findings || []).length
+      };
+
+      appendLog(`=== Phase 2: Launching Comparator Audit against Target B [${state.targetB.claimedModel}] ===`, 'highlight');
+
+      // Save Target A credentials
+      const origA = {
+        baseUrl: state.baseUrl,
+        apiKey: state.apiKey,
+        claimedModel: state.claimedModel,
+        detectedProtocol: state.detectedProtocol,
+        protocolMode: state.protocolMode
+      };
+
+      // Set Target B credentials into active state
+      state.baseUrl = el.targetBBaseUrl?.value || state.targetB.baseUrl;
+      state.apiKey = el.targetBApiKey?.value || state.targetB.apiKey;
+      state.claimedModel = el.targetBModel?.value || state.targetB.claimedModel;
+      state.protocolMode = state.targetB.protocolMode || 'auto';
+
+      await detectProtocol();
+      activeTests.forEach(id => updateTestRow(id, 'PENDING'));
+
+      const testResultsB = [];
+      for (let i = 0; i < activeTests.length; i++) {
+        const t = activeTests[i];
+        try {
+          const result = await t.run();
+          testResultsB.push(result);
+        } catch (bErr) {
+          testResultsB.push({ score: 0.0 });
+        }
+      }
+
+      const totalScoreB = testResultsB.reduce((acc, curr) => acc + curr.score, 0);
+      const scorePercentageB = Math.round((totalScoreB / testResultsB.length) * 100);
+
+      let verdictB = 'genuine';
+      if (scorePercentageB >= 80) verdictB = 'genuine';
+      else if (scorePercentageB >= 50) verdictB = 'suspicious';
+      else verdictB = 'fake';
+
+      const statsB = {
+        model: state.claimedModel,
+        endpoint: state.baseUrl || 'Default',
+        score: scorePercentageB,
+        verdict: verdictB,
+        ttft: el.statTtft?.textContent || '-',
+        tps: el.statTps?.textContent || '-',
+        findingsCount: (auditState.findings || []).length - statsA.findingsCount
+      };
+
+      // Restore Target A
+      state.baseUrl = origA.baseUrl;
+      state.apiKey = origA.apiKey;
+      state.claimedModel = origA.claimedModel;
+      state.detectedProtocol = origA.detectedProtocol;
+      state.protocolMode = origA.protocolMode;
+
+      // Render Dual Comparison
+      renderDualComparison(statsA, statsB);
+      appendLog(`[Dual Comparator] Comparison concluded: Target A (${statsA.score}%) vs Target B (${statsB.score}%).`, 'highlight');
+    }
+
   } catch (err) {
     appendLog(`Audit interrupted: ${err.message}`, 'error');
     showToast(`Audit failed: ${err.message}`, 'error');
@@ -3299,7 +3890,7 @@ async function startAudit() {
     el.btnStartAudit.disabled = false;
     el.btnStartAudit.innerHTML = `
       <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-      <span>Launch Forensic Scan</span>
+      <span>${state.auditMode === 'compare' ? (state.lang === 'en' ? 'Launch Dual Comparison Scan (A vs B)' : 'Mulai Audit Komparasi (A vs B)') : (state.lang === 'en' ? 'Launch Forensic Scan' : 'Mulai Pindai Forensik')}</span>
     `;
   }
 }
