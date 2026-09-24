@@ -313,7 +313,11 @@ const TRANSLATIONS = {
     modeSerial: 'Aman (1x)',
     modeTurbo: 'Turbo (3x)',
     exportMdBtn: 'Dossier (.MD)',
-    toastDossierDownloaded: 'Dossier forensik berhasil diunduh!'
+    toastDossierDownloaded: 'Dossier forensik berhasil diunduh!',
+
+    // Disclaimer
+    disclaimerTitle: 'Catatan Forensik & Akurasi:',
+    disclaimerBody: 'Hasil pengujian ini bersifat heuristik berbasis probabilitas & fingerprinting teknis. Respons model bersifat non-deterministik dan fluktuasi reverse proxy dapat memengaruhi skor. Gunakan laporan ini sebagai indikasi teknis awal, bukan vonis mutlak.'
   },
   en: {
     clientSandbox: 'Client-Side Sandbox',
@@ -439,7 +443,11 @@ const TRANSLATIONS = {
     modeSerial: 'Safe (1x)',
     modeTurbo: 'Turbo (3x)',
     exportMdBtn: 'Dossier (.MD)',
-    toastDossierDownloaded: 'Forensic dossier downloaded successfully!'
+    toastDossierDownloaded: 'Forensic dossier downloaded successfully!',
+
+    // Disclaimer
+    disclaimerTitle: 'Forensic Notice & Accuracy:',
+    disclaimerBody: 'Results are heuristic based on probabilistic fingerprinting and protocol telemetry. LLM responses are non-deterministic, and proxy network fluctuations may affect metrics. Use this report as an initial technical indication, not absolute legal proof.'
   }
 };
 
@@ -1904,7 +1912,8 @@ Findings & Technical Forensic Notes:
 
 ${evidenceBullets}
 
-Please check this endpoint configuration or process a refund if this endpoint cannot supply standard original weights. Thank you!`;
+Disclaimer Notice:
+⚠️ This technical audit is heuristic-based on probabilistic fingerprinting and wire telemetry. Responses are non-deterministic and proxy server queue delays can affect metrics. Please verify internal configuration or process a refund. Thank you!`;
   } else {
     complaintText = `Halo admin, mohon maaf mau konfirmasi perihal API Key yang saya beli.
 
@@ -1919,7 +1928,8 @@ Catatan & Temuan Pengujian:
 
 ${evidenceBullets}
 
-Mohon dicek kembali konfigurasi endpoint tersebut atau proses penyesuaian jika model tidak sesuai spesifikasi resmi. Terima kasih!`;
+Catatan Forensik:
+⚠️ Hasil pengujian ini bersifat heuristik berbasis probabilitas & fingerprinting teknis. Respons model bersifat non-deterministik dan fluktuasi reverse proxy dapat memengaruhi skor. Mohon dicek kembali konfigurasi endpoint tersebut atau proses penyesuaian/refund jika model tidak sesuai spesifikasi resmi. Terima kasih!`;
   }
 
   navigator.clipboard.writeText(complaintText).then(() => {
@@ -1979,6 +1989,10 @@ ${findingsMd}
 |---|---|---|---|
 ${testRowsMd}
 
+## 5. Forensic Notice & Methodology Disclaimer
+> ⚠️ **Catatan Forensik / Accuracy Notice**:
+> Hasil pengujian ini bersifat heuristik berbasis probabilitas & fingerprinting teknis. Respons model LLM bersifat non-deterministik dan fluktuasi reverse proxy (antrean server/penjual) dapat memengaruhi skor atau memicu timeout. Gunakan laporan ini sebagai indikasi teknis awal dan bahan verifikasi bersama seller, bukan vonis mutlak.
+
 ---
 _Disclaimer: This cryptographic and procedural fingerprint audit was executed purely in-browser without intermediate proxies._
 `;
@@ -2014,7 +2028,7 @@ function exportJsonReport() {
 
   const report = {
     utility: 'ModelProof Client-Side Forensic Scanner',
-    version: '1.0.6',
+    version: '1.0.8',
     timestamp: isoDate,
     target: {
       model: v.claimedModel,
@@ -2028,7 +2042,10 @@ function exportJsonReport() {
       findings: v.findings,
       tokenUsage: auditState.tokenUsage,
       vectors: vectorDetails
-    }
+    },
+    disclaimer: isEn
+      ? "Results are heuristic based on probabilistic fingerprinting and protocol telemetry. LLM responses are non-deterministic, and proxy network fluctuations may affect metrics. Use this report as an initial technical indication, not absolute legal proof."
+      : "Hasil pengujian ini bersifat heuristik berbasis probabilitas & fingerprinting teknis. Respons model bersifat non-deterministik dan fluktuasi reverse proxy dapat memengaruhi skor. Gunakan laporan ini sebagai indikasi teknis awal, bukan vonis mutlak."
   };
 
   const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json;charset=utf-8' });

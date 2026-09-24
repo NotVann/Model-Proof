@@ -394,6 +394,17 @@
           </div>
         </div>
 
+        <!-- Heuristic Accuracy & Methodology Alert Box -->
+        <div id="layman-disclaimer-box" class="p-2.5 rounded-lg border border-amber-900/40 bg-amber-950/20 text-[11px] font-sans leading-relaxed text-amber-300/90 flex items-start gap-2.5">
+          <i class="fa-solid fa-triangle-exclamation text-amber-400 mt-0.5 shrink-0 text-xs"></i>
+          <div>
+            <strong class="font-semibold text-amber-200" data-i18n="disclaimerTitle">Catatan Forensik & Akurasi:</strong>
+            <span class="text-zinc-400 block mt-0.5" data-i18n="disclaimerBody">
+              Hasil pengujian ini bersifat heuristik berbasis probabilitas & fingerprinting teknis. Respons model bersifat non-deterministik dan fluktuasi reverse proxy dapat memengaruhi skor. Gunakan laporan ini sebagai indikasi teknis awal, bukan vonis mutlak.
+            </span>
+          </div>
+        </div>
+
         <!-- Layman Action Bar (Copy Complaint Button & Dossier Exporters) -->
         <div class="pt-2 flex items-center gap-2 flex-wrap" id="layman-action-bar">
           <button id="btn-copy-complaint" type="button" class="hidden py-2 px-3 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 hover:border-emerald-500/50 text-xs font-mono text-zinc-200 transition flex items-center gap-2 shadow-sm">
@@ -550,6 +561,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=1.0.7"></script>
+  <script src="app.js?v=1.0.8"></script>
 </body>
 </html>
