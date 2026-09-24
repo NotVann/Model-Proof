@@ -3,7 +3,7 @@
 ## 1. OBJECTIVE & SCOPE
 Bangun lightweight, production-grade autonomous CLI coding & research agent (Claude Code parity).
 Transport: Universal OpenAI-compatible wire protocol (`/v1/chat/completions`) + proxy reseller target (`gpt-6-astra`).
-Lingkungan: Windows (PowerShell/CMD), Linux, macOS (Bash/Zsh).
+Lingkungan: Windows (PowerShell/CMD), Linux, macOS (Bash/Zsh), Android (Termux).
 
 ---
 
@@ -55,7 +55,10 @@ Terminal Markdown Render → Wait Next Stdin
 | `web_search` | Internet research | `{ query: string, max_results?: number }` | JSON array `[{title, link, snippet}]` | Auto-allow |
 | `web_fetch` | Web scraper | `{ url: string, raw?: boolean }` | Clean Markdown text (max 15k chars) | Auto-allow |
 
-### Detail Implementasi Tool:
+- **`bash_exec` & `proc_spawn` (Cross-Platform / Termux Shell Resolver)**:
+  - Windows: `powershell.exe -NoProfile -Command <cmd>`.
+  - Android (Termux): Deteksi `$PREFIX/bin/bash` atau fallback ke `$SHELL` / `sh`. Mencegah crash akibat path `/bin/bash` yang tidak ada di Android filesystem hierarchy.
+  - Linux & macOS: Menggunakan `$SHELL` (Bash/Zsh) atau `/bin/sh`.
 - **`fs_patch` (Resilient Diff Matcher)**:
   - **Tingkat 1 (Exact Match)**: String matching langsung pada target block.
   - **Tingkat 2 (Whitespace & CRLF Normalizer)**: Normalisasi otomatis `\r\n` ↔ `\n`, trim trailing whitespace pada setiap baris target vs file fisik.
