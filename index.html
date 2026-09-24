@@ -322,6 +322,19 @@
           <!-- Populated by JS -->
         </div>
 
+        <!-- Concurrency & Execution Mode Switcher -->
+        <div class="flex items-center justify-between text-[11px] font-mono py-1 px-2 rounded bg-zinc-950/70 border border-zinc-800/80">
+          <span class="text-zinc-500" data-i18n="execModeLabel">Execution Mode:</span>
+          <div class="flex items-center gap-1">
+            <button id="btn-mode-serial" type="button" class="px-2 py-0.5 rounded text-[10px] font-medium transition bg-zinc-850 text-emerald-400 border border-emerald-500/40">
+              <i class="fa-solid fa-shield text-[9px] mr-1"></i><span data-i18n="modeSerial">Safe (1x)</span>
+            </button>
+            <button id="btn-mode-turbo" type="button" class="px-2 py-0.5 rounded text-[10px] font-medium transition text-zinc-500 hover:text-zinc-300 border border-transparent">
+              <i class="fa-solid fa-bolt text-[9px] mr-1"></i><span data-i18n="modeTurbo">Turbo (3x)</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Estimated Token Usage Pill -->
         <div class="flex items-center justify-between text-[11px] font-mono py-1.5 px-2.5 rounded bg-zinc-950/70 border border-zinc-800/80 text-zinc-400">
           <span class="flex items-center gap-1.5 text-zinc-400">
@@ -381,11 +394,21 @@
           </div>
         </div>
 
-        <!-- Layman Action Bar (Copy Complaint Button) -->
+        <!-- Layman Action Bar (Copy Complaint Button & Dossier Exporters) -->
         <div class="pt-2 flex items-center gap-2 flex-wrap" id="layman-action-bar">
           <button id="btn-copy-complaint" type="button" class="hidden py-2 px-3 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 hover:border-emerald-500/50 text-xs font-mono text-zinc-200 transition flex items-center gap-2 shadow-sm">
             <i class="fa-regular fa-copy text-emerald-400"></i>
             <span data-i18n="copyComplaintBtn">Salin Bukti Komplain / Refund (WA/Telegram)</span>
+          </button>
+
+          <button id="btn-export-md" type="button" class="hidden py-2 px-3 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 hover:border-cyan-500/50 text-xs font-mono text-cyan-300 transition flex items-center gap-1.5 shadow-sm">
+            <i class="fa-solid fa-file-arrow-down text-cyan-400"></i>
+            <span data-i18n="exportMdBtn">Dossier (.MD)</span>
+          </button>
+
+          <button id="btn-export-json" type="button" class="hidden py-2 px-3 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 hover:border-amber-500/50 text-xs font-mono text-amber-300 transition flex items-center gap-1.5 shadow-sm">
+            <i class="fa-solid fa-code text-amber-400"></i>
+            <span>JSON</span>
           </button>
           
           <button id="btn-toggle-tech-details" type="button" class="py-2 px-3 rounded bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 text-xs font-mono text-zinc-400 hover:text-zinc-200 transition flex items-center gap-1.5 ml-auto">
@@ -527,6 +550,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=1.0.6"></script>
+  <script src="app.js?v=1.0.7"></script>
 </body>
 </html>

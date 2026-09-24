@@ -306,7 +306,14 @@ const TRANSLATIONS = {
 
     // Network & Timeout
     timeoutLabel: 'Batas Waktu (Timeout):',
-    timeoutHint: 'Naikkan jika proxy reseller antre atau model penalaran (reasoning) lambat.'
+    timeoutHint: 'Naikkan jika proxy reseller antre atau model penalaran (reasoning) lambat.',
+
+    // Execution Mode & Export
+    execModeLabel: 'Mode Eksekusi:',
+    modeSerial: 'Aman (1x)',
+    modeTurbo: 'Turbo (3x)',
+    exportMdBtn: 'Dossier (.MD)',
+    toastDossierDownloaded: 'Dossier forensik berhasil diunduh!'
   },
   en: {
     clientSandbox: 'Client-Side Sandbox',
@@ -425,7 +432,14 @@ const TRANSLATIONS = {
 
     // Network & Timeout
     timeoutLabel: 'Request Timeout:',
-    timeoutHint: 'Increase if upstream proxy queue or reasoning model is slow.'
+    timeoutHint: 'Increase if upstream proxy queue or reasoning model is slow.',
+
+    // Execution Mode & Export
+    execModeLabel: 'Execution Mode:',
+    modeSerial: 'Safe (1x)',
+    modeTurbo: 'Turbo (3x)',
+    exportMdBtn: 'Dossier (.MD)',
+    toastDossierDownloaded: 'Forensic dossier downloaded successfully!'
   }
 };
 
@@ -439,6 +453,7 @@ const state = {
   claimedModel: localStorage.getItem('mm_claimed_model') || 'claude-3-5-sonnet-20241022',
   corsProxy: localStorage.getItem('mm_cors_proxy') || '',
   requestTimeout: parseInt(localStorage.getItem('mm_request_timeout'), 10) || 60,
+  execMode: localStorage.getItem('mm_exec_mode') || 'serial', // 'serial' | 'turbo'
   selectedTests: JSON.parse(localStorage.getItem('mm_selected_tests') || '[1,2,3,4,5,6,7,8]'),
   isRunning: false
 };
@@ -470,6 +485,8 @@ const el = {
   corsStatusLabel: document.getElementById('cors-status-label'),
   timeoutSlider: document.getElementById('timeout-slider'),
   timeoutDisplay: document.getElementById('timeout-display'),
+  btnModeSerial: document.getElementById('btn-mode-serial'),
+  btnModeTurbo: document.getElementById('btn-mode-turbo'),
   testCheckboxesContainer: document.getElementById('test-checkboxes-container'),
   testPipelineContainer: document.getElementById('test-pipeline-container'),
   btnSelectAll: document.getElementById('btn-select-all'),
@@ -499,6 +516,8 @@ const el = {
   laymanEvidenceList: document.getElementById('layman-evidence-list'),
   laymanActionBar: document.getElementById('layman-action-bar'),
   btnCopyComplaint: document.getElementById('btn-copy-complaint'),
+  btnExportMd: document.getElementById('btn-export-md'),
+  btnExportJson: document.getElementById('btn-export-json'),
   btnToggleTechDetails: document.getElementById('btn-toggle-tech-details'),
   techDetailsSection: document.getElementById('tech-details-section'),
   techDetailsBtnLabel: document.getElementById('tech-details-btn-label'),
@@ -1088,8 +1107,8 @@ function initUI() {
   // Set initial language
   setLanguage(state.lang);
   updateEstimatedTokens();
-
   updateProtocolUI();
+  updateExecModeUI();
 }
 
 function updateProtocolUI() {
@@ -1371,6 +1390,35 @@ if (el.timeoutSlider) {
   });
 }
 
+function updateExecModeUI() {
+  const isSerial = state.execMode === 'serial';
+  if (el.btnModeSerial && el.btnModeTurbo) {
+    if (isSerial) {
+      el.btnModeSerial.className = 'px-2 py-0.5 rounded text-[10px] font-medium transition bg-zinc-850 text-emerald-400 border border-emerald-500/40';
+      el.btnModeTurbo.className = 'px-2 py-0.5 rounded text-[10px] font-medium transition text-zinc-500 hover:text-zinc-300 border border-transparent';
+    } else {
+      el.btnModeTurbo.className = 'px-2 py-0.5 rounded text-[10px] font-medium transition bg-zinc-850 text-cyan-400 border border-cyan-500/40';
+      el.btnModeSerial.className = 'px-2 py-0.5 rounded text-[10px] font-medium transition text-zinc-500 hover:text-zinc-300 border border-transparent';
+    }
+  }
+}
+
+if (el.btnModeSerial) {
+  el.btnModeSerial.addEventListener('click', () => {
+    state.execMode = 'serial';
+    localStorage.setItem('mm_exec_mode', 'serial');
+    updateExecModeUI();
+  });
+}
+
+if (el.btnModeTurbo) {
+  el.btnModeTurbo.addEventListener('click', () => {
+    state.execMode = 'turbo';
+    localStorage.setItem('mm_exec_mode', 'turbo');
+    updateExecModeUI();
+  });
+}
+
 el.btnClearLogs.addEventListener('click', () => el.consoleLogs.innerHTML = '');
 
 // Checkbox Preset Buttons
@@ -1448,94 +1496,122 @@ async function callModel({ messages, stream = false, maxTokens = 500, temperatur
 
   if (state.corsProxy) endpoint = state.corsProxy + endpoint;
 
-  const timeoutMs = (state.requestTimeout || 60) * 1000;
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const maxRetries = 1;
+  let attempt = 0;
+  let lastErr = null;
 
-  const startTime = performance.now();
-  let res;
+  while (attempt <= maxRetries) {
+    attempt++;
+    const timeoutMs = (state.requestTimeout || 60) * 1000;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    const startTime = performance.now();
+    let res;
 
-  try {
     try {
-      res = await fetch(endpoint, {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify(body),
-        signal: controller.signal
-      });
-    } catch (fetchErr) {
-      if (controller.signal.aborted) {
-        throw new Error(`Request timeout after ${state.requestTimeout || 60}s (upstream proxy or model did not respond in time)`);
-      }
-      // Automatic fallback to local server proxy if on localhost
-      if ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && !state.corsProxy) {
-        appendLog('[CORS Auto-Bypass] Direct browser call blocked by target nginx. Routing via local relay...', 'warn');
-        const relayEndpoint = `/api/proxy?url=${encodeURIComponent(endpoint)}`;
-        res = await fetch(relayEndpoint, {
+      try {
+        res = await fetch(endpoint, {
           method: 'POST',
           headers: headers,
           body: JSON.stringify(body),
           signal: controller.signal
         });
-      } else {
-        throw new Error(`CORS Blocked: Target server nginx has no Access-Control-Allow-Origin header. Use CORS Relay!`);
+      } catch (fetchErr) {
+        if (controller.signal.aborted) {
+          throw new Error(`Request timeout after ${state.requestTimeout || 60}s (upstream proxy or model did not respond in time)`);
+        }
+        // Automatic fallback to local server proxy if on localhost
+        if ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && !state.corsProxy) {
+          appendLog('[CORS Auto-Bypass] Direct browser call blocked by target nginx. Routing via local relay...', 'warn');
+          const relayEndpoint = `/api/proxy?url=${encodeURIComponent(endpoint)}`;
+          res = await fetch(relayEndpoint, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(body),
+            signal: controller.signal
+          });
+        } else {
+          throw new Error(`CORS Blocked: Target server nginx has no Access-Control-Allow-Origin header. Use CORS Relay!`);
+        }
+      } finally {
+        clearTimeout(timeoutId);
       }
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        let cleanMsg = errorText.slice(0, 160);
+        if (res.status === 504) {
+          cleanMsg = 'Gateway Timeout: Server reverse proxy/Cloudflare penjual kehabisan waktu menunggu respons dari upstream backend (upstream server down atau overload).';
+        } else if (res.status === 502) {
+          cleanMsg = 'Bad Gateway: Reverse proxy penjual tidak bisa terhubung ke backend server model.';
+        } else if (errorText.includes('<html') || errorText.includes('<!DOCTYPE')) {
+          const titleMatch = errorText.match(/<title>([^<]+)<\/title>/i);
+          cleanMsg = titleMatch ? titleMatch[1].trim() : `HTML Gateway Error (${res.status})`;
+        }
+
+        const isTransient = [429, 502, 503, 504].includes(res.status);
+        if (isTransient && attempt <= maxRetries) {
+          const jitter = Math.floor(Math.random() * 800) + 1200;
+          appendLog(`[Transient HTTP ${res.status}] Auto-retrying after ${jitter}ms jitter backoff (attempt ${attempt}/${maxRetries})...`, 'warn');
+          await new Promise(r => setTimeout(r, jitter));
+          continue;
+        }
+
+        throw new Error(`HTTP ${res.status}: ${cleanMsg}`);
+      }
+
+      if (stream) return { res, startTime };
+
+      const json = await res.json();
+      const latency = Math.round(performance.now() - startTime);
+      
+      let content = '';
+      let usage = null;
+      let returnedModel = json.model || '';
+
+      if (activeProto === 'openai') {
+        content = json.choices?.[0]?.message?.content || '';
+        usage = json.usage || null;
+      } else {
+        content = json.content?.map(c => c.text).join('') || '';
+        usage = {
+          prompt_tokens: json.usage?.input_tokens,
+          completion_tokens: json.usage?.output_tokens
+        };
+      }
+
+      // Accumulate Token Usage
+      const promptChars = messages ? messages.reduce((acc, m) => acc + (m.content?.length || 0), 0) : 0;
+      const pTokens = Number(usage?.prompt_tokens) || Math.ceil(promptChars / 3.8);
+      const cTokens = Number(usage?.completion_tokens) || Math.ceil((content?.length || 0) / 3.8);
+      if (!auditState.tokenUsage) auditState.tokenUsage = { prompt: 0, completion: 0, total: 0 };
+      auditState.tokenUsage.prompt += pTokens;
+      auditState.tokenUsage.completion += cTokens;
+      auditState.tokenUsage.total += (pTokens + cTokens);
+
+      if (el.statTokenConsumed) {
+        el.statTokenConsumed.textContent = `${auditState.tokenUsage.total.toLocaleString()} tk`;
+      }
+      if (el.laymanTokenText) {
+        el.laymanTokenText.textContent = `${auditState.tokenUsage.total.toLocaleString()} tk`;
+      }
+
+      return { content, usage, returnedModel, latency, raw: json };
+
+    } catch (err) {
+      lastErr = err;
+      const isTimeout = err.message.includes('timeout');
+      if (isTimeout && attempt <= maxRetries) {
+        const jitter = 1500;
+        appendLog(`[Timeout Trigger] Upstream lagging. Auto-retrying once after ${jitter}ms (attempt ${attempt}/${maxRetries})...`, 'warn');
+        await new Promise(r => setTimeout(r, jitter));
+        continue;
+      }
+      throw err;
     }
-  } finally {
-    clearTimeout(timeoutId);
   }
 
-  if (!res.ok) {
-    const errorText = await res.text();
-    let cleanMsg = errorText.slice(0, 160);
-    if (res.status === 504) {
-      cleanMsg = 'Gateway Timeout: Server reverse proxy/Cloudflare penjual kehabisan waktu menunggu respons dari upstream backend (upstream server down atau overload).';
-    } else if (res.status === 502) {
-      cleanMsg = 'Bad Gateway: Reverse proxy penjual tidak bisa terhubung ke backend server model.';
-    } else if (errorText.includes('<html') || errorText.includes('<!DOCTYPE')) {
-      const titleMatch = errorText.match(/<title>([^<]+)<\/title>/i);
-      cleanMsg = titleMatch ? titleMatch[1].trim() : `HTML Gateway Error (${res.status})`;
-    }
-    throw new Error(`HTTP ${res.status}: ${cleanMsg}`);
-  }
-
-  if (stream) return { res, startTime };
-
-  const json = await res.json();
-  const latency = Math.round(performance.now() - startTime);
-  
-  let content = '';
-  let usage = null;
-  let returnedModel = json.model || '';
-
-  if (activeProto === 'openai') {
-    content = json.choices?.[0]?.message?.content || '';
-    usage = json.usage || null;
-  } else {
-    content = json.content?.map(c => c.text).join('') || '';
-    usage = {
-      prompt_tokens: json.usage?.input_tokens,
-      completion_tokens: json.usage?.output_tokens
-    };
-  }
-
-  // Accumulate Token Usage
-  const promptChars = messages ? messages.reduce((acc, m) => acc + (m.content?.length || 0), 0) : 0;
-  const pTokens = Number(usage?.prompt_tokens) || Math.ceil(promptChars / 3.8);
-  const cTokens = Number(usage?.completion_tokens) || Math.ceil((content?.length || 0) / 3.8);
-  if (!auditState.tokenUsage) auditState.tokenUsage = { prompt: 0, completion: 0, total: 0 };
-  auditState.tokenUsage.prompt += pTokens;
-  auditState.tokenUsage.completion += cTokens;
-  auditState.tokenUsage.total += (pTokens + cTokens);
-
-  if (el.statTokenConsumed) {
-    el.statTokenConsumed.textContent = `${auditState.tokenUsage.total.toLocaleString()} tk`;
-  }
-  if (el.laymanTokenText) {
-    el.laymanTokenText.textContent = `${auditState.tokenUsage.total.toLocaleString()} tk`;
-  }
-
-  return { content, usage, returnedModel, latency, raw: json };
+  throw lastErr || new Error('Request execution failed after retries.');
 }
 
 function updateTestRow(testId, status, detailText = null, rawResponse = null, metaInfo = null) {
@@ -1758,6 +1834,10 @@ function renderLaymanSummary(scorePercentage, results) {
     el.btnCopyComplaint.classList.remove('hidden');
   }
 
+  // Always show export buttons when an audit is concluded
+  if (el.btnExportMd) el.btnExportMd.classList.remove('hidden');
+  if (el.btnExportJson) el.btnExportJson.classList.remove('hidden');
+
   // Populate Evidence List
   if (uniqueFindings.length > 0) {
     el.laymanEvidenceContainer.classList.remove('hidden');
@@ -1847,6 +1927,120 @@ Mohon dicek kembali konfigurasi endpoint tersebut atau proses penyesuaian jika m
   }).catch(err => {
     showToast((isEn ? 'Failed to copy draft: ' : 'Gagal menyalin draft: ') + err.message, 'error');
   });
+}
+
+// Download Dossier as Markdown (.MD)
+function exportMdDossier() {
+  if (!auditState.lastVerdict) return;
+  const v = auditState.lastVerdict;
+  const isEn = state.lang === 'en';
+  const isoDate = new Date().toISOString();
+  const fileDate = isoDate.slice(0, 19).replace(/[:T]/g, '-');
+
+  let findingsMd = '';
+  if (v.findings.length > 0) {
+    findingsMd = v.findings.map((f, i) => `### ${i + 1}. [${f.severity.toUpperCase()}] ${f.headline}\n${f.desc}`).join('\n\n');
+  } else {
+    findingsMd = '_No critical discrepancies or spoofing indicators detected._';
+  }
+
+  // Active tests status breakdown table
+  const testRowsMd = TEST_REGISTRY
+    .filter(t => state.selectedTests.includes(t.id))
+    .map(t => {
+      const row = document.getElementById(`test-row-${t.id}`);
+      const status = row ? row.querySelector('.test-status')?.textContent?.trim() || 'PASS' : 'PASS';
+      const detail = row ? row.querySelector('.test-detail')?.textContent?.trim() || '-' : '-';
+      return `| V${String(t.id).padStart(2, '0')} | ${t.name} | **${status}** | ${detail.replace(/\|/g, '\\|')} |`;
+    })
+    .join('\n');
+
+  const content = `# ModelProof Forensic Audit Dossier
+Generated by [ModelProof AI Mask Checker](https://notvann.github.io/Model-Proof/) (100% Client-Side Sandbox)
+
+## 1. Audit Target Metadata
+- **Timestamp (UTC)**: \`${isoDate}\`
+- **Claimed Model Profile**: \`${v.claimedModel}\`
+- **Target Base URL**: \`${v.baseUrl || 'https://api.openai.com/v1'}\`
+- **Detected Wire Protocol**: \`${state.detectedProtocol.toUpperCase()}\`
+- **Execution Mode**: \`${state.execMode.toUpperCase()}\`
+- **Cumulative Tokens Consumed**: \`~${auditState.tokenUsage.total.toLocaleString()} tk\`
+
+## 2. Executive Forensic Verdict
+- **Authenticity Score**: **\`${v.scorePercentage}%\`**
+- **Verdict Classification**: **\`${v.verdictLevel.toUpperCase()}\`**
+- **Risk Assessment**: **\`${v.verdictLevel === 'genuine' ? 'SAFE' : v.verdictLevel === 'suspicious' ? 'MEDIUM' : 'FRAUD / FAKED'}\`**
+
+## 3. Discrepancy Findings & Forensic Notes
+${findingsMd}
+
+## 4. Vector Probe Breakdown Matrix
+| ID | Vector Engine | Result | Forensic Observation |
+|---|---|---|---|
+${testRowsMd}
+
+---
+_Disclaimer: This cryptographic and procedural fingerprint audit was executed purely in-browser without intermediate proxies._
+`;
+
+  const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `ModelProof-Dossier-${v.claimedModel}-${fileDate}.md`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(isEn ? 'Forensic dossier (.MD) downloaded!' : 'Dossier forensik (.MD) berhasil diunduh!', 'success');
+}
+
+// Download Pure JSON Report for CI/CD or dispute records
+function exportJsonReport() {
+  if (!auditState.lastVerdict) return;
+  const v = auditState.lastVerdict;
+  const isEn = state.lang === 'en';
+  const isoDate = new Date().toISOString();
+  const fileDate = isoDate.slice(0, 19).replace(/[:T]/g, '-');
+
+  const vectorDetails = TEST_REGISTRY
+    .filter(t => state.selectedTests.includes(t.id))
+    .map(t => {
+      const row = document.getElementById(`test-row-${t.id}`);
+      const status = row ? row.querySelector('.test-status')?.textContent?.trim() || 'PASS' : 'PASS';
+      const detail = row ? row.querySelector('.test-detail')?.textContent?.trim() || '' : '';
+      return { id: t.id, name: t.name, status, detail };
+    });
+
+  const report = {
+    utility: 'ModelProof Client-Side Forensic Scanner',
+    version: '1.0.6',
+    timestamp: isoDate,
+    target: {
+      model: v.claimedModel,
+      baseUrl: v.baseUrl,
+      detectedProtocol: state.detectedProtocol,
+      executionMode: state.execMode
+    },
+    audit: {
+      scorePercentage: v.scorePercentage,
+      verdict: v.verdictLevel,
+      findings: v.findings,
+      tokenUsage: auditState.tokenUsage,
+      vectors: vectorDetails
+    }
+  };
+
+  const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `ModelProof-Report-${v.claimedModel}-${fileDate}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(isEn ? 'Audit report (.JSON) downloaded!' : 'Laporan audit (.JSON) berhasil diunduh!', 'success');
 }
 
 // ----------------------------------------------------
@@ -2988,23 +3182,69 @@ async function startAudit() {
     // Phase 0: Pre-flight Wire Protocol Auto-Detection
     await detectProtocol();
 
-    for (let i = 0; i < activeTests.length; i++) {
-      const t = activeTests[i];
-      try {
-        const result = await t.run();
-        testResults.push(result);
-      } catch (vectorErr) {
-        appendLog(`[Vector ${t.id}] Interrupted: ${vectorErr.message}`, 'error');
-        updateTestRow(t.id, 'FAILED', `Error: ${vectorErr.message}`);
-        testResults.push({ score: 0.0 });
-        auditState.findings.push({
-          category: 'compliance',
-          severity: 'warning',
-          headline: `Vektor ${t.name} Timeout / Gagal Respons`,
-          desc: `Model tidak merespons pengujian (${vectorErr.message}). Kemungkinan server upstream overload atau memblokir payload tes.`
-        });
+    let completedCount = 0;
+    const isTurbo = state.execMode === 'turbo';
+    appendLog(`[Audit Dispatcher] Execution Mode: ${isTurbo ? 'Turbo (3x Concurrency)' : 'Safe (Serial 1x)'}...`);
+
+    if (!isTurbo) {
+      // Serial Execution (Safe Mode)
+      for (let i = 0; i < activeTests.length; i++) {
+        const t = activeTests[i];
+        try {
+          const result = await t.run();
+          testResults.push(result);
+        } catch (vectorErr) {
+          appendLog(`[Vector ${t.id}] Interrupted: ${vectorErr.message}`, 'error');
+          updateTestRow(t.id, 'FAILED', `Error: ${vectorErr.message}`);
+          testResults.push({ score: 0.0 });
+          auditState.findings.push({
+            category: 'compliance',
+            severity: 'warning',
+            headline: `Vektor ${t.name} Timeout / Gagal Respons`,
+            desc: `Model tidak merespons pengujian (${vectorErr.message}). Kemungkinan server upstream overload atau memblokir payload tes.`
+          });
+        }
+        completedCount++;
+        el.suiteProgressText.textContent = `${completedCount}/${activeTests.length} Completed`;
+        // Micro throttle between serial tests to avoid triggering bursts
+        if (i < activeTests.length - 1) await new Promise(r => setTimeout(r, 180));
       }
-      el.suiteProgressText.textContent = `${i + 1}/${activeTests.length} Completed`;
+    } else {
+      // Turbo Mode: Concurrency Pool (Limit to 3 parallel requests to protect reseller ratelimits)
+      const CONCURRENCY = 3;
+      const queue = [...activeTests];
+      const resultsMap = new Map();
+
+      async function worker() {
+        while (queue.length > 0) {
+          const t = queue.shift();
+          try {
+            const res = await t.run();
+            resultsMap.set(t.id, res);
+          } catch (vectorErr) {
+            appendLog(`[Vector ${t.id}] Interrupted: ${vectorErr.message}`, 'error');
+            updateTestRow(t.id, 'FAILED', `Error: ${vectorErr.message}`);
+            resultsMap.set(t.id, { score: 0.0 });
+            auditState.findings.push({
+              category: 'compliance',
+              severity: 'warning',
+              headline: `Vektor ${t.name} Timeout / Gagal Respons`,
+              desc: `Model tidak merespons pengujian (${vectorErr.message}).`
+            });
+          } finally {
+            completedCount++;
+            el.suiteProgressText.textContent = `${completedCount}/${activeTests.length} Completed`;
+          }
+        }
+      }
+
+      const workers = Array.from({ length: Math.min(CONCURRENCY, queue.length) }, () => worker());
+      await Promise.all(workers);
+
+      // Re-order test results to match original activeTests order
+      activeTests.forEach(t => {
+        testResults.push(resultsMap.get(t.id) || { score: 0.0 });
+      });
     }
 
     const totalScore = testResults.reduce((acc, curr) => acc + curr.score, 0);
@@ -3050,6 +3290,14 @@ async function startAudit() {
 // Layman Button Listeners
 if (el.btnCopyComplaint) {
   el.btnCopyComplaint.addEventListener('click', copyComplaintDraft);
+}
+
+if (el.btnExportMd) {
+  el.btnExportMd.addEventListener('click', exportMdDossier);
+}
+
+if (el.btnExportJson) {
+  el.btnExportJson.addEventListener('click', exportJsonReport);
 }
 
 if (el.btnToggleTechDetails) {

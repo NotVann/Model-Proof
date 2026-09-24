@@ -222,54 +222,80 @@ async function callModel(opts, { messages, stream = false, maxTokens = 400, temp
     if (system) bodyObj.system = system;
   }
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), opts.timeout * 1000);
+  const maxRetries = 1;
+  let attempt = 0;
+  let lastErr = null;
 
-  const t0 = performance.now();
-  try {
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(bodyObj),
-      signal: controller.signal
-    });
+  while (attempt <= maxRetries) {
+    attempt++;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), opts.timeout * 1000);
+    const t0 = performance.now();
 
-    if (!res.ok) {
-      const errTxt = await res.text();
-      throw new Error(`HTTP ${res.status}: ${errTxt.slice(0, 150)}`);
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(bodyObj),
+        signal: controller.signal
+      });
+
+      if (!res.ok) {
+        const errTxt = await res.text();
+        const isTransient = [429, 502, 503, 504].includes(res.status);
+        if (isTransient && attempt <= maxRetries) {
+          const jitter = Math.floor(Math.random() * 800) + 1200;
+          if (opts.verbose) console.warn(`\x1b[33m[!] Transient HTTP ${res.status}. Retrying in ${jitter}ms (attempt ${attempt}/${maxRetries})...\x1b[0m`);
+          await new Promise(r => setTimeout(r, jitter));
+          continue;
+        }
+        throw new Error(`HTTP ${res.status}: ${errTxt.slice(0, 150)}`);
+      }
+
+      if (stream) {
+        return { response: res, t0 };
+      }
+
+      const json = await res.json();
+      const latency = Math.round(performance.now() - t0);
+
+      let content = '';
+      let usage = null;
+      if (activeProto === 'openai') {
+        content = json.choices?.[0]?.message?.content || '';
+        usage = json.usage || null;
+      } else {
+        content = json.content?.map(c => c.text).join('') || '';
+        usage = {
+          prompt_tokens: json.usage?.input_tokens,
+          completion_tokens: json.usage?.output_tokens
+        };
+      }
+
+      const promptChars = messages ? messages.reduce((acc, m) => acc + (m.content?.length || 0), 0) : 0;
+      const pTokens = Number(usage?.prompt_tokens) || Math.ceil(promptChars / 3.8);
+      const cTokens = Number(usage?.completion_tokens) || Math.ceil((content?.length || 0) / 3.8);
+      cliMetrics.promptTokens += pTokens;
+      cliMetrics.completionTokens += cTokens;
+      cliMetrics.totalTokens += (pTokens + cTokens);
+
+      return { content, usage, latency, raw: json };
+    } catch (err) {
+      lastErr = err;
+      const isTimeout = err.name === 'AbortError' || err.message.includes('timeout');
+      if (isTimeout && attempt <= maxRetries) {
+        const jitter = 1500;
+        if (opts.verbose) console.warn(`\x1b[33m[!] Timeout. Retrying in ${jitter}ms (attempt ${attempt}/${maxRetries})...\x1b[0m`);
+        await new Promise(r => setTimeout(r, jitter));
+        continue;
+      }
+      throw err;
+    } finally {
+      clearTimeout(timer);
     }
-
-    if (stream) {
-      return { response: res, t0 };
-    }
-
-    const json = await res.json();
-    const latency = Math.round(performance.now() - t0);
-
-    let content = '';
-    let usage = null;
-    if (activeProto === 'openai') {
-      content = json.choices?.[0]?.message?.content || '';
-      usage = json.usage || null;
-    } else {
-      content = json.content?.map(c => c.text).join('') || '';
-      usage = {
-        prompt_tokens: json.usage?.input_tokens,
-        completion_tokens: json.usage?.output_tokens
-      };
-    }
-
-    const promptChars = messages ? messages.reduce((acc, m) => acc + (m.content?.length || 0), 0) : 0;
-    const pTokens = Number(usage?.prompt_tokens) || Math.ceil(promptChars / 3.8);
-    const cTokens = Number(usage?.completion_tokens) || Math.ceil((content?.length || 0) / 3.8);
-    cliMetrics.promptTokens += pTokens;
-    cliMetrics.completionTokens += cTokens;
-    cliMetrics.totalTokens += (pTokens + cTokens);
-
-    return { content, usage, latency, raw: json };
-  } finally {
-    clearTimeout(timer);
   }
+
+  throw lastErr || new Error('Request failed after retries');
 }
 
 // Protocol Handshake

@@ -212,48 +212,70 @@ class ApiClient:
         data_bytes = json.dumps(body).encode("utf-8")
         req = urllib.request.Request(endpoint, data=data_bytes, headers=headers)
 
-        t0 = time.perf_counter()
-        if stream:
-            res = urllib.request.urlopen(req, timeout=self.timeout, context=self.ssl_ctx)
-            return res, t0
+        max_retries = 1
+        attempt = 0
+        last_err = None
 
-        with urllib.request.urlopen(req, timeout=self.timeout, context=self.ssl_ctx) as res:
-            raw_text = res.read().decode("utf-8")
-            latency = int((time.perf_counter() - t0) * 1000)
-            data = json.loads(raw_text)
+        while attempt <= max_retries:
+            attempt += 1
+            t0 = time.perf_counter()
+            if stream:
+                res = urllib.request.urlopen(req, timeout=self.timeout, context=self.ssl_ctx)
+                return res, t0
 
-            content = ""
-            usage = None
-            if self.active_proto == "openai":
-                choices = data.get("choices", [])
-                if choices:
-                    content = choices[0].get("message", {}).get("content", "")
-                usage = data.get("usage")
-            else:
-                parts = data.get("content", [])
-                content = "".join(p.get("text", "") for p in parts)
-                u = data.get("usage", {})
-                usage = {
-                    "prompt_tokens": u.get("input_tokens"),
-                    "completion_tokens": u.get("output_tokens")
-                }
+            try:
+                with urllib.request.urlopen(req, timeout=self.timeout, context=self.ssl_ctx) as res:
+                    raw_text = res.read().decode("utf-8")
+                    latency = int((time.perf_counter() - t0) * 1000)
+                    data = json.loads(raw_text)
 
-            # Accumulate token metrics
-            prompt_chars = sum(len(str(m.get("content", ""))) for m in messages)
-            comp_chars = len(content or "")
-            p_tok = int(usage.get("prompt_tokens") or round(prompt_chars / 3.8)) if usage else int(round(prompt_chars / 3.8))
-            c_tok = int(usage.get("completion_tokens") or round(comp_chars / 3.8)) if usage else int(round(comp_chars / 3.8))
+                    content = ""
+                    usage = None
+                    if self.active_proto == "openai":
+                        choices = data.get("choices", [])
+                        if choices:
+                            content = choices[0].get("message", {}).get("content", "")
+                        usage = data.get("usage")
+                    else:
+                        parts = data.get("content", [])
+                        content = "".join(p.get("text", "") for p in parts)
+                        u = data.get("usage", {})
+                        usage = {
+                            "prompt_tokens": u.get("input_tokens"),
+                            "completion_tokens": u.get("output_tokens")
+                        }
 
-            self.token_usage["prompt"] += p_tok
-            self.token_usage["completion"] += c_tok
-            self.token_usage["total"] += (p_tok + c_tok)
+                    # Accumulate token metrics
+                    prompt_chars = sum(len(str(m.get("content", ""))) for m in messages)
+                    comp_chars = len(content or "")
+                    p_tok = int(usage.get("prompt_tokens") or round(prompt_chars / 3.8)) if usage else int(round(prompt_chars / 3.8))
+                    c_tok = int(usage.get("completion_tokens") or round(comp_chars / 3.8)) if usage else int(round(comp_chars / 3.8))
 
-            return {
-                "content": content or "",
-                "usage": usage,
-                "latency": latency,
-                "raw": data
-            }
+                    self.token_usage["prompt"] += p_tok
+                    self.token_usage["completion"] += c_tok
+                    self.token_usage["total"] += (p_tok + c_tok)
+
+                    return {
+                        "content": content or "",
+                        "usage": usage,
+                        "latency": latency,
+                        "raw": data
+                    }
+            except urllib.error.HTTPError as he:
+                last_err = he
+                if he.code in (429, 502, 503, 504) and attempt <= max_retries:
+                    jitter = random.uniform(1.2, 2.0)
+                    time.sleep(jitter)
+                    continue
+                raise
+            except (urllib.error.URLError, TimeoutError, socket.timeout) as ue:
+                last_err = ue
+                if attempt <= max_retries:
+                    time.sleep(1.5)
+                    continue
+                raise
+
+        raise last_err or RuntimeError("Request failed after retry")
 
 
 # ----------------------------------------------------
