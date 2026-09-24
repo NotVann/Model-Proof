@@ -206,6 +206,9 @@ Terminal Markdown Render → Wait Next Stdin
   | `/add <path>` | Pin File | Sematkan file ke context memori permanen model |
   | `/drop <path>` | Unpin File | Lepaskan file dari context memori permanen model |
   | `/compact` | Manual Compact | Rangkum percakapan & kompres token history secara on-demand |
+  | `/history` | Session History | Tampilkan daftar riwayat sesi percakapan sebelumnya |
+  | `/resume <id>` | Resume Session | Lanjutkan kembali percakapan dari sesi yang tersimpan sebelumnya |
+  | `/mcp` | MCP Status | Tampilkan status server Model Context Protocol yang terhubung |
   | `/clear` | Context Reset | Bersihkan buffer terminal dan reset riwayat memori percakapan |
   | `/map` | Inspect Repo Map | Tampilkan skeleton AST codebase yang saat ini di-cache & diinjeksi ke prompt |
   | `/cost` | Telemetry Detail | Rincian konsumsi token prompt/completion, biaya USD, dan rata-rata TTFT |
@@ -219,6 +222,9 @@ Terminal Markdown Render → Wait Next Stdin
     /add <path>     Pin file to persistent LLM context
     /drop <path>    Unpin file from persistent LLM context
     /compact        Compress & summarize conversation memory
+    /history        List previous conversation sessions
+    /resume [id]    Resume saved session state
+    /mcp            Show connected Model Context Protocol servers
     /clear          Reset conversation context & clear screen
     /map            Display AST codebase architecture skeleton
     /cost           Show token usage & estimated API cost
@@ -277,14 +283,65 @@ Terminal Markdown Render → Wait Next Stdin
     1. Lakukan normalisasi CRLF ↔ LF dan fuzzy indent matching (Tingkat 2 & 3).
     2. Jika tetap gagal, engine mengembalikan error terstruktur ke konteks model: `"Patch failed: Target block not found in file. Action required: Call fs_write with the entire updated file content."`
     3. Engine ReAct otomatis melanjutkan loop ke tool `fs_write` tanpa crash atau abort sesi.
-- **HTTP 401 Unauthorized**: Cetak "Invalid API Key" → exit(1).
-- **HTTP 429 Rate Limit**: Sleep backoff `(Math.random() * 1000) + 1500ms` → retry max 2x.
-- **HTTP 502/504 Bad Gateway (Reseller Proxy Lag)**: Retry via non-streaming mode payload.
-- **Model Loop Hallucination**: Max 10 consecutive tool calls tanpa text reply user → abort loop dan kembalikan kontrol ke stdin.
+- **Sidecar Linter & Type-Check Auto-Correction Loop (Lint-on-Save)**:
+  - **Pemicu**: Tool `fs_patch` atau `fs_write` sukses memodifikasi file kode (`.ts`, `.tsx`, `.js`, `.jsx`, `.py`, `.go`, `.rs`).
+  - **Mekanisme**:
+    1. Engine mendeteksi runner linter lokal proyek:
+       - TypeScript: `npx tsc --noEmit`
+       - JavaScript/TypeScript: `npx eslint <file> --quiet`
+       - Python: `ruff check <file>` atau `flake8 <file>`
+       - Go: `go vet` / Rust: `cargo check --quiet`
+    2. Jalankan check secara background (<1.5 detik timeout).
+    3. Jika lint check mengembalikan error (exit code != 0): Engine tidak menyelesaikan turn, melainkan secara otomatis menyuntikkan pesan error diagnostik ke ReAct agent:
+       `[Sidecar Linter Diagnostic]: Error in src/server.ts:42 - Property 'listen' does not exist on type 'App'. Action: Fix this compilation error.`
+    4. Model langsung melakukan patch korektif otomatis tanpa campur tangan pengguna.
 
 ---
 
-## 13. DELIVERABLES & ACCEPTANCE CRITERIA
+## 14. MCP (MODEL CONTEXT PROTOCOL) CLIENT INTEGRATION
+- **Standard Protocol Support**: JSON-RPC 2.0 via standard I/O (`stdio`) dan SSE transport.
+- **Configuration File (`~/.astra/mcp.json` atau `./.astra/mcp.json`)**:
+  ```json
+  {
+    "mcpServers": {
+      "postgres": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://localhost/mydb"]
+      },
+      "github": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-github"],
+        "env": { "GITHUB_TOKEN": "ghp_xxx" }
+      }
+    }
+  }
+  ```
+- **Lifecycle & Discovery**:
+  1. Saat CLI start, engine spawn child process untuk setiap server di konfigurasi MCP.
+  2. Engine memanggil `tools/list` RPC endpoint untuk mengambil daftar tool dan parameter schemas.
+  3. Tool MCP otomatis digabungkan ke tool definitions OpenAI format bersama built-in tools (`fs_*`, `bash_exec`, `web_*`).
+  4. Perintah `/mcp` di terminal menampilkan tabel server yang aktif, latensi koneksi, dan jumlah tool yang terekspos.
+
+---
+
+## 15. SESSION PERSISTENCE & RESUME ARCHITECTURE
+- **Storage Location**: `~/.astra/sessions/<session-id>.json`.
+- **Transcript Data Schema**:
+  - `id`: UUIDv4 string.
+  - `createdAt`: ISO 8601 timestamp.
+  - `workspace`: Absolute root directory path.
+  - `model`: Nama model LLM yang digunakan.
+  - `tokenUsage`: Total input/output token & cost counter.
+  - `messages`: Array lengkap riwayat percakapan (system, user, assistant, tool results).
+- **CLI Commands & Flags**:
+  - `astra --resume`: Melanjutkan sesi paling terakhir di workspace saat ini.
+  - `astra --resume <session-id>`: Memuat ulang percakapan spesifik berdasarkan ID.
+  - `/history`: Menampilkan tabel 10 sesi terakhir (ID, timestamp, prompt pertama, jumlah turn, token).
+  - `/resume <session-id>`: Beralih ke sesi tersimpan langsung dari dalam REPL prompt yang sedang aktif.
+
+---
+
+## 16. DELIVERABLES & ACCEPTANCE CRITERIA
 1. **Single Entry Point**: `npx astra-cli` atau `node bin/agent.js`.
 2. **Acceptance Test 1 (Plan/Build Switch)**: Tekan `Tab` di prompt terminal → badge berubah `[PLAN]` ↔ `[BUILD]` seketika tanpa crash/buffer flush.
 3. **Acceptance Test 2 (Plan Enforcement)**: Dalam mode `PLAN`, input `"hapus file temp.txt"` → model dilarang panggil `bash_exec`/`fs_write`, hanya buat rencana teks.
@@ -302,3 +359,6 @@ Terminal Markdown Render → Wait Next Stdin
 15. **Acceptance Test 14 (Context Pinning /add & /drop)**: Ketik `/add src/auth.ts` → status bar menampilkan `Pinned: [src/auth.ts]` dan konten file selalu disematkan di prompt tanpa tergantung tool call `fs_read`; ketik `/drop src/auth.ts` → file terlepas dari pinned memory.
 16. **Acceptance Test 15 (Manual /compact)**: Setelah percakapan 15 giliran → ketik `/compact` → engine merangkum riwayat lama jadi 1 pesan ringkasan terkompresi dan token usage context berkurang drastis.
 17. **Acceptance Test 16 (Bracketed Paste & Audio Chime)**: Paste 200 baris kode sekaligus → terminal menerima tanpa glitch parsial; jalankan task yang memakan waktu > 10 detik → terminal membunyikan ASCII BEL chime (`\x07`) saat task selesai.
+18. **Acceptance Test 17 (Lint-on-Save Self-Correction)**: Model menulis fungsi TypeScript dengan type error sengaja → background linter mendeteksi error → engine otomatis feed error ke model → model memperbaiki kode secara mandiri hingga lulus tsc.
+19. **Acceptance Test 18 (MCP Server Invocation)**: Hubungkan server `@modelcontextprotocol/server-postgres` di `mcp.json` → ketik `/mcp` → tabel menampilkan server connected; model dapat mengeksekusi query database via tool RPC.
+20. **Acceptance Test 19 (Session Resume)**: Tutup terminal saat sesi berjalan → ketik `astra --resume` di terminal baru → context 100% pulih lengkap dengan riwayat git checkpoint dan memory conversation.
